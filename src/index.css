@@ -8,49 +8,49 @@
 
 @layer base {
   :root {
-    /* Couleurs principales - Palette féminine */
-    --background: 30 25% 98%;
-    --foreground: 0 0% 20%;
+    /* Couleurs principales - Palette féminine plus foncée */
+    --background: 30 20% 96%;
+    --foreground: 0 0% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
+    --card-foreground: 0 0% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover-foreground: 0 0% 15%;
 
-    /* Rose poudré principal */
-    --primary: 350 60% 75%;
+    /* Rose foncé principal */
+    --primary: 345 65% 55%;
     --primary-foreground: 0 0% 100%;
 
     /* Rose blush secondaire */
-    --secondary: 350 40% 95%;
-    --secondary-foreground: 350 60% 35%;
+    --secondary: 345 45% 92%;
+    --secondary-foreground: 345 70% 30%;
 
-    /* Tons neutres doux */
-    --muted: 30 20% 94%;
-    --muted-foreground: 0 0% 45%;
+    /* Tons neutres */
+    --muted: 30 15% 92%;
+    --muted-foreground: 0 0% 40%;
 
-    /* Accent doré */
-    --accent: 40 70% 60%;
-    --accent-foreground: 40 80% 20%;
+    /* Accent doré foncé */
+    --accent: 35 75% 45%;
+    --accent-foreground: 35 90% 95%;
 
-    --destructive: 0 70% 55%;
+    --destructive: 0 75% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 20% 90%;
-    --input: 30 20% 90%;
-    --ring: 350 60% 75%;
+    --border: 30 15% 85%;
+    --input: 30 15% 85%;
+    --ring: 345 65% 55%;
 
     --radius: 0.75rem;
 
-    /* Couleurs personnalisées */
-    --rose-light: 350 50% 96%;
-    --rose-medium: 350 55% 85%;
-    --rose-dark: 350 60% 65%;
-    --gold: 40 70% 55%;
-    --gold-light: 40 60% 85%;
-    --cream: 35 30% 96%;
-    --nude: 25 25% 88%;
+    /* Couleurs personnalisées - Plus foncées */
+    --rose-light: 345 45% 94%;
+    --rose-medium: 345 55% 70%;
+    --rose-dark: 345 65% 45%;
+    --gold: 35 80% 42%;
+    --gold-light: 35 55% 75%;
+    --cream: 35 25% 94%;
+    --nude: 25 20% 82%;
 
     /* Gradients */
     --gradient-rose: linear-gradient(135deg, hsl(350 60% 85%), hsl(350 55% 75%));
