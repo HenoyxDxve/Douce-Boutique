@@ -1,0 +1,15 @@
+"""
+Script de migration Django automatique
+Ce script crée les tables de la base de données
+"""
+
+# Pour créer et appliquer les migrations automatiquement, exécutez:
+# cd backend
+# python manage.py makemigrations store
+# python manage.py migrate
+
+# Ou utilisez ce script simplement en exécutant:
+# python manage.py migrate --run-syncdb
+
+# Après les migrations, initialisez les données:
+# python init_db.py

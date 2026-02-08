@@ -5,10 +5,14 @@ import { Button } from '@/components/ui/button';
 import { usePanier } from '@/contexts/PanierContext';
 import { formaterPrix } from '@/data/produits';
 import { toast } from 'sonner';
+import apiService from '@/lib/api';
+import PaymentModal from '@/components/PaymentModal';
+import { useState } from 'react';
 
 const Panier: React.FC = () => {
   const navigate = useNavigate();
   const { articles, retirerDuPanier, modifierQuantite, totalPanier, nombreArticles, viderPanier } = usePanier();
+  const [modalOpen, setModalOpen] = useState(false);
 
   const fraisLivraison = totalPanier >= 50000 ? 0 : 2500;
   const totalCommande = totalPanier + fraisLivraison;
@@ -176,6 +180,45 @@ const Panier: React.FC = () => {
                   <ArrowRight className="ml-2" size={18} />
                 </Button>
               </Link>
+
+              <Button className="w-full btn-secondary py-4 text-base mb-4" onClick={() => setModalOpen(true)}>
+                Payer avec MTN
+              </Button>
+
+              <PaymentModal
+                open={modalOpen}
+                onOpenChange={setModalOpen}
+                onConfirm={async ({ phone, adresse, ville, codePostal }) => {
+                  try {
+                    // Créer la commande d'abord
+                    const createResp: any = await apiService.createCommande({
+                      adresse_livraison: adresse || 'Adresse client',
+                      ville_livraison: ville || 'Abidjan',
+                      code_postal_livraison: codePostal || '00000',
+                      pays_livraison: "Côte d'Ivoire",
+                    });
+
+                    const numero = createResp && createResp.numero;
+                    if (!numero) {
+                      toast.error('Impossible de créer la commande');
+                      return;
+                    }
+
+                    toast.success('Commande créée, initiation du paiement MTN...');
+
+                    const payResp: any = await apiService.initiateMTNPayment(numero, phone);
+                    if (payResp && payResp.reference_id) {
+                      toast.success('Paiement MTN initié — vérifiez votre téléphone');
+                      navigate(`/commande?numero=${numero}`);
+                    } else {
+                      toast.error('Échec d initiation du paiement MTN');
+                    }
+                  } catch (err: any) {
+                    toast.error(err?.message || 'Erreur lors du paiement');
+                    console.error(err);
+                  }
+                }}
+              />
 
               <p className="text-xs text-center text-muted-foreground">
                 Paiement sécurisé via MTN, Orange, Moov, Wave ou carte bancaire

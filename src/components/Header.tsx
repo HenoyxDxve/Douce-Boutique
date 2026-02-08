@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, Search, Menu, X, Heart } from 'lucide-react';
+import { ShoppingBag, User, Search, Menu, X, Heart, LogOut } from 'lucide-react';
 import { usePanier } from '@/contexts/PanierContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import apiService from '@/lib/api';
 
 const Header: React.FC = () => {
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const { nombreArticles } = usePanier();
+  const { estConnecte, estAdmin, utilisateur, deconnexion } = useAuth();
   const location = useLocation();
 
   const liens = [
@@ -19,6 +22,25 @@ const Header: React.FC = () => {
   ];
 
   const estActif = (href: string) => location.pathname === href;
+
+  const handleDeconnexion = () => {
+    deconnexion();
+    setMenuOuvert(false);
+  };
+
+  const redirectionAdmin = () => {
+    // Demander au backend de créer une session admin (en utilisant le JWT stocké)
+    apiService.createAdminSession()
+      .then(() => {
+        // Rediriger vers le tableau de bord admin du frontend
+        window.location.href = 'http://localhost:8081/admin/dashboard';
+      })
+      .catch((err) => {
+        console.error('Erreur création session admin:', err);
+        // Fallback vers Django admin
+        window.open('http://localhost:8000/admin/', '_blank');
+      });
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
@@ -87,15 +109,36 @@ const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Favoris */}
-            <button className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Favoris">
-              <Heart size={20} />
-            </button>
+            {/* Favoris - visible si connecté */}
+            {estConnecte && (
+              <Link to="/favoris" className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Favoris">
+                <Heart size={20} />
+              </Link>
+            )}
 
-            {/* Compte */}
-            <Link to="/compte" className="p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Mon compte">
-              <User size={20} />
-            </Link>
+            {/* Compte ou Admin */}
+            {estConnecte ? (
+              <>
+                {estAdmin ? (
+                  <button
+                    onClick={redirectionAdmin}
+                    className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors text-primary font-bold"
+                    aria-label="Admin"
+                    title="Dashboard Admin"
+                  >
+                    ⚙️
+                  </button>
+                ) : (
+                  <Link to="/compte" className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Mon compte">
+                    <User size={20} />
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Link to="/connexion" className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Connexion">
+                <User size={20} />
+              </Link>
+            )}
 
             {/* Panier */}
             <Link to="/panier" className="relative p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Panier">
@@ -127,6 +170,36 @@ const Header: React.FC = () => {
                   {lien.label}
                 </Link>
               ))}
+              {estConnecte && (
+                <>
+                  <Link
+                    to="/favoris"
+                    className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                    onClick={() => setMenuOuvert(false)}
+                  >
+                    <Heart size={16} />
+                    Favoris
+                  </Link>
+                  {estAdmin && (
+                    <button
+                      onClick={() => {
+                        redirectionAdmin();
+                        setMenuOuvert(false);
+                      }}
+                      className="py-2 px-4 rounded-lg text-sm font-medium text-primary hover:bg-secondary transition-colors text-left"
+                    >
+                      ⚙️ Dashboard Admin
+                    </button>
+                  )}
+                  <button
+                    onClick={handleDeconnexion}
+                    className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                  >
+                    <LogOut size={16} />
+                    Déconnexion
+                  </button>
+                </>
+              )}
             </div>
           </nav>
         )}

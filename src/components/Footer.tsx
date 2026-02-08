@@ -57,6 +57,14 @@ const Footer: React.FC = () => {
               Votre destination mode pour des pièces élégantes et intemporelles.
               Qualité premium et style unique pour sublimer votre féminité.
             </p>
+            <div className="mt-4 text-sm text-background/70">
+              <h5 className="font-medium mb-1">À propos du créateur</h5>
+              <p>
+                Étudiant développeur — Licence 3 Développement Logiciel à l'ESATIC. Passionné par le
+                développement web et la création d'expériences utilisateur soignées, je conçois des
+                interfaces modernes et des solutions backend robustes.
+              </p>
+            </div>
             <div className="flex space-x-4">
               <a href="#" className="p-2 bg-background/10 rounded-full hover:bg-primary transition-colors" aria-label="Instagram">
                 <Instagram size={18} />
@@ -104,7 +112,7 @@ const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={16} className="text-primary flex-shrink-0" />
-                <span>+225 07 00 00 00 00</span>
+                <span>+225 0575964494</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail size={16} className="text-primary flex-shrink-0" />

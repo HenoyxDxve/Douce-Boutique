@@ -1,11 +1,14 @@
 import robeFleurie from '@/assets/products/robe-fleurie.jpg';
-import blouseSoie from '@/assets/products/blouse-soie.jpg';
-import pantalonTailleur from '@/assets/products/pantalon-tailleur.jpg';
-import sacCuir from '@/assets/products/sac-cuir.jpg';
-import escarpins from '@/assets/products/escarpins.jpg';
-import collierOr from '@/assets/products/collier-or.jpg';
-import robeCocktail from '@/assets/products/robe-cocktail.jpg';
-import sandalesDorees from '@/assets/products/sandales-dorees.jpg';
+
+// Images publiques
+const robeFleurie = '/assets/products/robe-fleurie.jpg';
+const blouseSoie = '/assets/products/blouse-soie.jpg';
+const pantalonTailleur = '/assets/products/pantalon-tailleur.jpg';
+const sacCuir = '/assets/products/sac-cuir.jpg';
+const escarpins = '/assets/products/escarpins.jpg';
+const collierOr = '/assets/products/collier-or.jpg';
+const robeCocktail = '/assets/products/robe-cocktail.jpg';
+const sandalesDorees = '/assets/products/sandales-dorees.jpg';
 
 export interface Produit {
   id: string;
