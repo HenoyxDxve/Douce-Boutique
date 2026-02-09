@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 import { Trash2, Edit2, Plus } from 'lucide-react';
 
 interface Categorie {

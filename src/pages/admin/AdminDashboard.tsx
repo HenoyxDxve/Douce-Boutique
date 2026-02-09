@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 import { Package, Users, ShoppingCart } from 'lucide-react';
 
 export default function AdminDashboard() {

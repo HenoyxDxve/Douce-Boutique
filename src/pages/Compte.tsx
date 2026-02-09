@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 
 
 interface Commande {

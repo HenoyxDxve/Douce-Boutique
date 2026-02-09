@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { usePanier } from '@/contexts/PanierContext';
 import { formaterPrix } from '@/data/produits';
 import { toast } from 'sonner';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 import PaymentModal from '@/components/PaymentModal';
 import { useState } from 'react';
 

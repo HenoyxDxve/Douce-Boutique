@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 
 export default function MotDePasseOublie() {
   const navigate = useNavigate();

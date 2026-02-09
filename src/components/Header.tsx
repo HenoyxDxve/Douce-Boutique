@@ -5,7 +5,7 @@ import { usePanier } from '@/contexts/PanierContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 
 const Header: React.FC = () => {
   const [menuOuvert, setMenuOuvert] = useState(false);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState<any[]>([]);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 import { Shield, ShieldOff } from 'lucide-react';
 
 export default function AdminUtilisateurs() {

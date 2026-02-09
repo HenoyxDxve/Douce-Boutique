@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 
 export interface Utilisateur {
   id: string;

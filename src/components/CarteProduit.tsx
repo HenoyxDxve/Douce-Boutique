@@ -5,7 +5,7 @@ import { Produit, formaterPrix, calculerReduction } from '@/data/produits';
 import { usePanier } from '@/contexts/PanierContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectionConnexion } from './ProtectionConnexion';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 import { toast } from 'sonner';
 
 interface CarteProduitProps {

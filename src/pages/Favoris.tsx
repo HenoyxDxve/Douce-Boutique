@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
-import apiService from '@/lib/api';
+import apiService from '@/lib/api.ts';
 // Header and Footer are provided globally by the app layout
 
 interface Produit {
