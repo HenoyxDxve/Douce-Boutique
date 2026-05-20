@@ -4,6 +4,9 @@ import { ChevronLeft, Heart, Minus, Plus, ShoppingBag, Truck, RefreshCw, Shield 
 import { Button } from '@/components/ui/button';
 import { produits, formaterPrix, calculerReduction, Produit } from '@/data/produits';
 import { usePanier } from '@/contexts/PanierContext';
+import { useFavoris } from '@/contexts/FavorisContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { ProtectionConnexion } from '@/components/ProtectionConnexion';
 import CarteProduit from '@/components/CarteProduit';
 import { toast } from 'sonner';
 
@@ -11,6 +14,9 @@ const PageProduit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { ajouterAuPanier } = usePanier();
+  const { isFavoris, toggleFavoris } = useFavoris();
+  const { estConnecte } = useAuth();
+  const [showProtection, setShowProtection] = useState(false);
 
   const produit = produits.find((p) => p.id === id);
 
@@ -216,11 +222,18 @@ const PageProduit: React.FC = () => {
               </Button>
               <Button
                 variant="outline"
-                className="p-4 border-border hover:bg-secondary hover:text-primary"
-                onClick={() => toast.success('Ajouté aux favoris ! ❤️')}
+                className={`p-4 border-border transition-colors ${
+                  produit && isFavoris(produit.id)
+                    ? 'bg-red-500 text-white border-red-500 hover:bg-red-600'
+                    : 'hover:bg-secondary hover:text-primary'
+                }`}
+                onClick={() => {
+                  if (!estConnecte) { setShowProtection(true); return; }
+                  if (produit) toggleFavoris(produit.id);
+                }}
                 aria-label="Ajouter aux favoris"
               >
-                <Heart size={24} />
+                <Heart size={24} fill={produit && isFavoris(produit.id) ? 'currentColor' : 'none'} />
               </Button>
             </div>
 
@@ -241,6 +254,12 @@ const PageProduit: React.FC = () => {
             </div>
           </div>
         </div>
+
+      <ProtectionConnexion
+        open={showProtection}
+        onOpenChange={setShowProtection}
+        action="ajouter aux favoris"
+      />
 
         {/* Produits similaires */}
         {produitsSimilaires.length > 0 && (

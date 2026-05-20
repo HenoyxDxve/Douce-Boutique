@@ -10,13 +10,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     const charger = async () => {
       try {
-        const produits: any = await apiService.getProduits();
-        const utilisateurs: any = await apiService.request('GET', '/utilisateurs/');
-        const commandes: any = await apiService.request('GET', '/commandes/list_user_commandes/');
+        const [produits, utilisateurs, commandes]: any[] = await Promise.allSettled([
+          apiService.getProduits(),
+          apiService.request('GET', '/utilisateurs/list_all/'),
+          apiService.getAllCommandes(),
+        ]);
         setStats({
-          produits: Array.isArray(produits) ? produits.length : 0,
-          utilisateurs: Array.isArray(utilisateurs) ? utilisateurs.length : 0,
-          commandes: Array.isArray(commandes) ? commandes.length : 0,
+          produits: produits.status === 'fulfilled' && Array.isArray(produits.value) ? produits.value.length : 0,
+          utilisateurs: utilisateurs.status === 'fulfilled' && Array.isArray(utilisateurs.value) ? utilisateurs.value.length : 0,
+          commandes: commandes.status === 'fulfilled' && Array.isArray(commandes.value) ? commandes.value.length : 0,
         });
       } catch (e) {
         console.error(e);

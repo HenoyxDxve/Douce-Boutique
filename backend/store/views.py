@@ -242,12 +242,22 @@ class UtilisateurViewSet(viewsets.ViewSet):
         utilisateur = self.get_utilisateur_from_token(request)
         if not utilisateur:
             return Response({'erreur': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         serializer = UtilisateurDetailSerializer(utilisateur, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def list_all(self, request):
+        """Liste tous les utilisateurs (admin seulement)."""
+        utilisateur = self.get_utilisateur_from_token(request)
+        if not utilisateur or not getattr(utilisateur, 'est_admin', False):
+            return Response({'erreur': 'Accès admin requis'}, status=status.HTTP_403_FORBIDDEN)
+        utilisateurs = Utilisateur.objects.all().order_by('-date_inscription')
+        serializer = UtilisateurDetailSerializer(utilisateurs, many=True)
+        return Response(serializer.data)
 
 class PanierViewSet(viewsets.ViewSet):
     """ViewSet pour les paniers"""
@@ -465,14 +475,132 @@ class CommandeViewSet(viewsets.ViewSet):
         """Récupère une commande spécifique"""
         numero = request.query_params.get('numero')
         utilisateur = self.get_utilisateur_from_token(request)
-        
+
         if not utilisateur or not numero:
             return Response(
                 {'erreur': 'Paramètres manquants'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         commande = get_object_or_404(Commande, numero=numero, utilisateur=utilisateur)
+        serializer = CommandeSerializer(commande)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def create_from_items(self, request):
+        """Crée une commande depuis les articles du panier frontend (IDs locaux ou UUID)."""
+        utilisateur = self.get_utilisateur_from_token(request)
+        if not utilisateur:
+            return Response({'erreur': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+        items = request.data.get('items', [])
+        adresse_livraison = request.data.get('adresse_livraison', '').strip()
+        ville_livraison = request.data.get('ville_livraison', '').strip()
+        code_postal_livraison = request.data.get('code_postal_livraison', '00000').strip()
+        pays_livraison = request.data.get('pays_livraison', "Côte d'Ivoire")
+        notes = request.data.get('notes', '')
+        mode_paiement = request.data.get('mode_paiement', 'livraison')
+
+        if not items:
+            return Response({'erreur': 'Aucun article fourni'}, status=status.HTTP_400_BAD_REQUEST)
+        if not adresse_livraison or not ville_livraison:
+            return Response({'erreur': 'Adresse et ville de livraison requises'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .slug_mapping import get_product_by_slug_or_id
+
+        # Calculer le total depuis les prix envoyés par le frontend
+        total = sum(
+            float(item.get('prix_unitaire', 0)) * int(item.get('quantite', 1))
+            for item in items
+        )
+
+        commande = Commande.objects.create(
+            utilisateur=utilisateur,
+            prix_total=total,
+            adresse_livraison=adresse_livraison,
+            ville_livraison=ville_livraison,
+            code_postal_livraison=code_postal_livraison,
+            pays_livraison=pays_livraison,
+            notes=f"[{mode_paiement}] {notes}".strip(),
+        )
+
+        for item in items:
+            produit_id = str(item.get('produit_id', ''))
+            quantite = max(1, int(item.get('quantite', 1)))
+            prix_unitaire = float(item.get('prix_unitaire', 0))
+            taille = item.get('taille', '') or ''
+            couleur = item.get('couleur', '') or ''
+            nom = item.get('nom', produit_id)
+
+            produit = get_product_by_slug_or_id(produit_id)
+
+            if produit is None:
+                # Créer un produit générique pour ne pas bloquer la commande
+                try:
+                    categorie, _ = Categorie.objects.get_or_create(
+                        slug='divers',
+                        defaults={'nom': 'Divers', 'icone': '📦'}
+                    )
+                    import uuid as _uuid
+                    dummy_id = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, produit_id))
+                    produit, _ = Produit.objects.get_or_create(
+                        id=dummy_id,
+                        defaults={
+                            'nom': nom,
+                            'description': nom,
+                            'prix': prix_unitaire,
+                            'categorie': categorie,
+                            'stock': 0,
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f'Impossible de créer produit générique pour {produit_id}: {e}')
+                    continue
+
+            LigneCommande.objects.create(
+                commande=commande,
+                produit=produit,
+                quantite=quantite,
+                prix_unitaire=prix_unitaire,
+                taille=taille,
+                couleur=couleur,
+            )
+
+            # Décrémenter le stock si disponible
+            if produit.stock >= quantite:
+                produit.stock -= quantite
+                produit.save()
+
+        serializer = CommandeSerializer(commande)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'])
+    def list_all_commandes(self, request):
+        """Liste toutes les commandes (admin seulement)."""
+        utilisateur = self.get_utilisateur_from_token(request)
+        if not utilisateur or not getattr(utilisateur, 'est_admin', False):
+            return Response({'erreur': 'Accès admin requis'}, status=status.HTTP_403_FORBIDDEN)
+        commandes = Commande.objects.all().order_by('-date_commande')
+        serializer = CommandeSerializer(commandes, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'])
+    def update_status(self, request):
+        """Met à jour le statut d'une commande (admin seulement)."""
+        utilisateur = self.get_utilisateur_from_token(request)
+        if not utilisateur or not getattr(utilisateur, 'est_admin', False):
+            return Response({'erreur': 'Accès admin requis'}, status=status.HTTP_403_FORBIDDEN)
+
+        commande_id = request.query_params.get('id')
+        new_statut = request.data.get('statut')
+
+        statuts_valides = ['en_attente', 'confirmee', 'expedie', 'livree', 'annulee']
+        if new_statut not in statuts_valides:
+            return Response({'erreur': f'Statut invalide. Valeurs: {statuts_valides}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        commande = get_object_or_404(Commande, id=commande_id)
+        commande.statut = new_statut
+        commande.save()
         serializer = CommandeSerializer(commande)
         return Response(serializer.data)
 

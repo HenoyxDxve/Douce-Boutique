@@ -1,5 +1,3 @@
-import robeFleurie from '@/assets/products/robe-fleurie.jpg';
-
 // Images publiques
 const robeFleurie = '/assets/products/robe-fleurie.jpg';
 const blouseSoie = '/assets/products/blouse-soie.jpg';

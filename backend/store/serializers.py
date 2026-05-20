@@ -122,11 +122,12 @@ class LigneCommandeSerializer(serializers.ModelSerializer):
 class CommandeSerializer(serializers.ModelSerializer):
     lignes = LigneCommandeSerializer(many=True, read_only=True)
     utilisateur_email = serializers.CharField(source='utilisateur.email', read_only=True)
-    
+    utilisateur_nom = serializers.CharField(source='utilisateur.nom_complet', read_only=True)
+
     class Meta:
         model = Commande
         fields = [
-            'id', 'numero', 'utilisateur', 'utilisateur_email', 'statut',
+            'id', 'numero', 'utilisateur', 'utilisateur_email', 'utilisateur_nom', 'statut',
             'prix_total', 'adresse_livraison', 'ville_livraison',
             'code_postal_livraison', 'pays_livraison', 'notes',
             'lignes', 'date_commande', 'date_modification'

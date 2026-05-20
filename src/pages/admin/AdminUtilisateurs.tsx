@@ -12,7 +12,7 @@ export default function AdminUtilisateurs() {
     const charger = async () => {
       try {
         setChargement(true);
-        const u: any = await apiService.request('GET', '/utilisateurs/');
+        const u: any = await apiService.request('GET', '/utilisateurs/list_all/');
         setUtilisateurs(Array.isArray(u) ? u : []);
       } catch (e) {
         console.error(e);
