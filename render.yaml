@@ -8,7 +8,7 @@ services:
   - type: web
     name: douce-boutique
     runtime: static
-    branch: claude/complete-ecommerce-shop-2Nqsz
+    branch: production
     rootDir: .
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
@@ -26,7 +26,7 @@ services:
     name: douce-boutique-api
     runtime: python
     plan: free
-    branch: claude/complete-ecommerce-shop-2Nqsz
+    branch: production
     rootDir: backend
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
     startCommand: "gunicorn ecommerce.wsgi"
