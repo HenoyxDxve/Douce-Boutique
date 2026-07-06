@@ -38,7 +38,7 @@ export default function AdminProduits() {
 
   const [editing, setEditing] = useState<Produit | null>(null);
   const [modalOuverte, setModalOuverte] = useState(false);
-  const [form, setForm] = useState<Partial<Produit> & { image_principale?: string | File | null }>({});
+  const [form, setForm] = useState<Partial<Omit<Produit, 'image_principale'>> & { image_principale?: string | File | null }>({});
 
   const charger = async () => {
     try {

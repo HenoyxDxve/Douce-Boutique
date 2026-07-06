@@ -77,7 +77,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
-        <aside className="w-64 bg-sidebar p-6 text-sidebar-foreground border-r flex-shrink-0 flex flex-col" style={{ minHeight: '100vh' }}>
+          <aside className="w-64 bg-sidebar p-6 text-sidebar-foreground border-r flex-shrink-0 flex flex-col min-h-screen">
           <h2 className="text-xl font-semibold mb-8">
             <span className="text-primary">Belle</span>Boutique Admin
           </h2>
@@ -119,7 +119,7 @@ export default function AdminLayout() {
             <a
               href="http://localhost:8000/admin/"
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer noopener"
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition py-2 px-3 rounded-lg hover:bg-sidebar-accent"
             >
               Ouvrir Django Admin (avancé)

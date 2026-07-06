@@ -95,6 +95,8 @@ const PageProduit: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setImageActive(index)}
+                    title={`Voir l'image ${index + 1}`}
+                    aria-label={`Voir l'image ${index + 1}`}
                     className={`w-20 h-24 rounded-lg overflow-hidden border-2 transition-colors ${
                       imageActive === index ? 'border-primary' : 'border-transparent'
                     }`}

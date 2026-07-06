@@ -680,8 +680,10 @@ const Compte: React.FC = () => {
                             </p>
                           </div>
                           <button
+                            type="button"
                             onClick={() => handleRemoveFavoris(fav.produit.id)}
                             className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition"
+                            aria-label="Retirer des favoris"
                           >
                             <Heart size={20} fill="currentColor" />
                           </button>
