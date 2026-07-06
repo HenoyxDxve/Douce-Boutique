@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import BoutonGoogle from '@/components/BoutonGoogle';
 import { toast } from 'sonner';
 
 export default function Connexion() {
@@ -16,18 +17,10 @@ export default function Connexion() {
   const [erreur, setErreur] = useState('');
 
   if (estConnecte) {
-    // Rediriger les admins vers le dashboard
+    // Rediriger les admins vers le dashboard admin de l'application
     if (estAdmin) {
-      setTimeout(() => {
-        window.location.href = 'http://localhost:8000/admin';
-      }, 500);
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-lg">Redirection vers le tableau de bord admin...</p>
-          </div>
-        </div>
-      );
+      navigate('/admin/dashboard');
+      return null;
     }
 
     // Rediriger les clients normaux
@@ -42,14 +35,15 @@ export default function Connexion() {
     setErreur('');
 
     try {
-      await connexion(email, motDePasse);
+      const utilisateurConnecte = await connexion(email, motDePasse);
       toast.success('Connexion réussie! 🎉');
-      
-      // Petite pause avant redirection
-      setTimeout(() => {
+
+      if (utilisateurConnecte.est_admin) {
+        navigate('/admin/dashboard');
+      } else {
         const from = location.state?.from?.pathname || '/';
         navigate(from);
-      }, 500);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la connexion';
       setErreur(message);
@@ -60,12 +54,12 @@ export default function Connexion() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">
-          👤 Connexion
+    <div className="min-h-screen bg-gradient-to-br from-rose-light to-cream flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-hover p-8">
+        <h1 className="text-3xl font-serif font-semibold text-center mb-2 gradient-text">
+          Connexion
         </h1>
-        <p className="text-center text-gray-600 mb-6">
+        <p className="text-center text-muted-foreground mb-6">
           Accédez à votre compte Douce Boutique
         </p>
 
@@ -77,7 +71,7 @@ export default function Connexion() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Email
             </label>
             <Input
@@ -87,11 +81,12 @@ export default function Connexion() {
               placeholder="votre@email.com"
               required
               disabled={chargement}
+              className="input-elegant"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Mot de passe
             </label>
             <Input
@@ -101,24 +96,27 @@ export default function Connexion() {
               placeholder="••••••••"
               required
               disabled={chargement}
+              className="input-elegant"
             />
           </div>
 
           <Button
             type="submit"
             disabled={chargement || !email || !motDePasse}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2 rounded-lg transition"
+            className="w-full btn-primary py-6 text-base"
           >
             {chargement ? 'Connexion en cours...' : 'Se connecter'}
           </Button>
         </form>
 
+        <BoutonGoogle />
+
         <div className="mt-6 space-y-3 text-sm">
-          <p className="text-center text-gray-600">
+          <p className="text-center text-muted-foreground">
             Vous n'avez pas de compte?{' '}
             <button
               onClick={() => navigate('/inscription')}
-              className="text-pink-600 hover:text-pink-700 font-semibold"
+              className="text-primary hover:text-rose-dark font-semibold"
             >
               S'inscrire
             </button>
@@ -126,7 +124,7 @@ export default function Connexion() {
           <p className="text-center">
             <button
               onClick={() => navigate('/mot-de-passe-oublie')}
-              className="text-purple-600 hover:text-purple-700 font-semibold"
+              className="text-accent hover:opacity-80 font-semibold"
             >
               Mot de passe oublié?
             </button>

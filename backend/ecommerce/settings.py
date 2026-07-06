@@ -136,13 +136,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'store.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    # Limite les tentatives sur les endpoints sensibles (connexion, inscription,
+    # mot de passe oublié) pour freiner le brute-force ; voir throttle_scope='auth'.
+    'DEFAULT_THROTTLE_RATES': {
+        'auth': '10/minute',
+    },
 }
 
 # JWT Configuration
@@ -155,14 +160,17 @@ SIMPLE_JWT = {
 }
 
 # CORS Configuration - Permissif pour développement
+# En dev, Vite peut démarrer sur n'importe quel port si les défauts sont occupés
+# (5173, 8080, 8081...) : on autorise donc tout port localhost/127.0.0.1 via regex
+# plutôt que de maintenir une liste figée.
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:8080',
-    'http://localhost:8081',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:8081',
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^http://localhost:\d+$',
+    r'^http://127\.0\.0\.1:\d+$',
+] if DEBUG else []
+
+CORS_ALLOWED_ORIGINS = [] if DEBUG else [
+    # Renseigner ici les domaines de production réels.
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -215,4 +223,53 @@ MTN_API_BASE = config('MTN_API_BASE', default='')
 MTN_TOKEN_URL = config('MTN_TOKEN_URL', default='')
 MTN_ENV = config('MTN_ENV', default='sandbox')
 MTN_CALLBACK_URL = config('MTN_CALLBACK_URL', default='http://localhost:8000/api/paiements/mtn/webhook/')
+
+# CinetPay configuration (carte bancaire + Mobile Money : Orange, MTN, Wave, Moov)
+# Tant que CINETPAY_API_KEY/CINETPAY_SITE_ID sont vides, le module fonctionne en mode simulation.
+CINETPAY_API_KEY = config('CINETPAY_API_KEY', default='')
+CINETPAY_SITE_ID = config('CINETPAY_SITE_ID', default='')
+CINETPAY_NOTIFY_URL = config('CINETPAY_NOTIFY_URL', default='http://localhost:8000/api/paiements/cinetpay/notify/')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+
+# Firebase Cloud Messaging (notifications push, gratuit).
+# Tant que FIREBASE_CREDENTIALS_PATH est vide, l'envoi push est simulé (les
+# notifications in-app restent actives dans tous les cas).
+FIREBASE_CREDENTIALS_PATH = config('FIREBASE_CREDENTIALS_PATH', default='')
+
+# Email (newsletter). Par défaut : mode simulation, les emails sont affichés
+# dans la console du serveur au lieu d'être réellement envoyés. Configurer un
+# compte SMTP réel (ex: Gmail + mot de passe d'application) en production.
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend',
+)
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='BelleBoutique <noreply@belleboutique.ci>')
+
+# Brevo (ex-Sendinblue) — email + SMS transactionnels, pensé pour la production.
+# BREVO_SMTP_LOGIN/BREVO_SMTP_KEY renseignés → tous les emails (mot de passe
+# oublié, campagnes newsletter) passent automatiquement par le relais SMTP
+# Brevo, sans autre configuration. BREVO_API_KEY renseignée → les SMS (commande
+# reçue, changement de statut) sont réellement envoyés ; sinon ils sont simulés
+# (journalisés côté serveur) comme les autres intégrations du projet.
+BREVO_API_KEY = config('BREVO_API_KEY', default='')
+BREVO_SMTP_LOGIN = config('BREVO_SMTP_LOGIN', default='')
+BREVO_SMTP_KEY = config('BREVO_SMTP_KEY', default='')
+BREVO_SMS_SENDER = config('BREVO_SMS_SENDER', default='DouceBoutik')
+
+if BREVO_SMTP_LOGIN and BREVO_SMTP_KEY:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp-relay.brevo.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = BREVO_SMTP_LOGIN
+    EMAIL_HOST_PASSWORD = BREVO_SMTP_KEY
+
+# Connexion Google (Sign-In). Tant que GOOGLE_CLIENT_ID est vide, le bouton
+# Google reste inactif côté frontend et l'endpoint renvoie une erreur claire.
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 

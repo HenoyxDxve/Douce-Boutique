@@ -1,335 +1,167 @@
-# Douce Boutique - E-commerce Platform
+# Douce Boutique — E-commerce Platform
 
-Une plateforme e-commerce moderne construite avec **React + TypeScript + Vite** (frontend) et **Django + Django REST Framework** (backend).
+Plateforme e-commerce **React + TypeScript + Vite** (frontend) et **Django + Django REST Framework** (backend), avec panier et favoris persistants (visiteurs et membres), mode sombre, dashboard admin complet (produits, promotions, catégories, commandes, utilisateurs, newsletter, rapports), notifications in-app (+ push Firebase optionnel), campagnes email newsletter, canal WhatsApp, et paiement en ligne (carte bancaire + Mobile Money local) via CinetPay.
 
-## 🌟 Caractéristiques
+Le visiteur peut naviguer, ajouter au panier et aux favoris sans compte ; la connexion/inscription n'est demandée qu'au moment de finaliser le paiement (le panier et les favoris sont automatiquement transférés vers le compte après connexion).
 
-### Frontend
-- ✨ Interface utilisateur élégante avec Tailwind CSS
-- 🛒 Gestion complète du panier
-- 🔐 Système d'authentification sécurisé (JWT)
-- 👤 Gestion des comptes utilisateurs
-- 📦 Catalogue de produits filtrable
-- 💳 Processus de commande intégré
-- 📱 Design responsive et mobile-friendly
-- 🎨 Composants réutilisables avec Shadcn/ui
+## Prérequis
 
-### Backend
-- 🔒 API REST sécurisée avec JWT
-- 👥 Gestion complète des utilisateurs et authentification
-- 📦 Gestion des produits et catégories
-- 🛍️ Système de panier persistant
-- 📋 Gestion des commandes avec historique
-- 👨‍💼 Interface d'administration Django
-- 📊 Base de données relationnelle robuste
-- 🚀 Prêt pour la production avec PostgreSQL
+- Node.js 18+ et npm
+- Python 3.10+ et pip
 
-## 📋 Prérequis
+## Installation et démarrage
 
 ### Frontend
-- Node.js 16+ ou Bun
-- npm, yarn, ou bun
-
-### Backend
-- Python 3.8+
-- pip ou poetry
-
-## 🚀 Installation et Démarrage
-
-### 1. Frontend Setup
 
 ```bash
-# Installation des dépendances
 npm install
-# ou avec yarn
-yarn install
-# ou avec bun
-bun install
-
-# Démarrer le serveur de développement
 npm run dev
-# Le frontend sera accessible à http://localhost:5173
+# http://localhost:5173
 ```
 
-### 2. Backend Setup
+### Backend
 
 ```bash
-# Se placer dans le dossier backend
 cd backend
-
-# Créer un environnement virtuel
 python -m venv venv
-
-# Activer l'environnement virtuel
-# Sur Windows:
-venv\Scripts\activate
-# Sur Linux/Mac:
-source venv/bin/activate
-
-# Installer les dépendances
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
-
-# Copier le fichier d'environnement
 cp .env.example .env
-
-# Appliquer les migrations
 python manage.py migrate
-
-# Créer les données de base (catégories, produits, utilisateurs admin)
-python init_db.py
-
-# Démarrer le serveur Django
+python manage.py seed_produits   # peuple catégories + produits de démo
 python manage.py runserver
-# Le backend sera accessible à http://localhost:8000
+# http://localhost:8000
 ```
 
-## 👤 Comptes de Test
+## Comptes de test
 
-### Admin (Gestion complète du système)
-- **Email**: `admin@douceboutique.fr`
-- **Mot de passe**: `Admin@12345`
-- **Accès**: http://localhost:8000/admin
+- **Admin** : `admin@douceboutique.fr` / `Admin@12345` (créé via `setup_admin.py` ou Django Admin)
+- **Utilisateur** : à créer via `/inscription`
 
-### Utilisateur Test
-- **Email**: `test@example.com`
-- **Mot de passe**: `Test@12345`
-
-## 🔑 Créer un Nouvel Utilisateur Admin
-
-### Via Django Admin
-1. Allez à http://localhost:8000/admin
-2. Connectez-vous avec le compte admin
-3. Allez dans la section "Utilisateurs"
-4. Cliquez sur "Ajouter un utilisateur"
-5. Remplissez les informations et cochez "est admin"
-
-### Via Django Shell
-```bash
-python manage.py shell
-```
-
-```python
-from store.models import Utilisateur
-from django.contrib.auth.hashers import make_password
-
-Utilisateur.objects.create(
-    email='newadmin@example.com',
-    mot_de_passe=make_password('SecurePassword@123'),
-    nom='Admin',
-    prenom='Nouveau',
-    est_admin=True,
-    est_actif=True
-)
-```
-
-## 🏗️ Architecture du Projet
+## Architecture
 
 ```
-douce-boutique-en-ligne/
-├── src/                           # Frontend React
-│   ├── components/               # Composants React
-│   │   ├── Header.tsx           # En-tête de navigation
-│   │   ├── Footer.tsx           # Pied de page
-│   │   ├── CarteProduit.tsx     # Carte produit
-│   │   └── ui/                  # Composants Shadcn
-│   ├── pages/                   # Pages principales
-│   │   ├── Accueil.tsx          # Page d'accueil
-│   │   ├── Catalogue.tsx        # Catalogue des produits
-│   │   ├── Panier.tsx           # Page du panier
-│   │   ├── Compte.tsx           # Gestion du compte
-│   │   └── PageProduit.tsx      # Détails produit
-│   ├── contexts/                # Context React
-│   │   └── PanierContext.tsx    # Gestion du panier
-│   ├── hooks/                   # Hooks personnalisés
-│   └── lib/                     # Utilitaires
-│
-└── backend/                      # Django Backend
-    ├── ecommerce/              # Configuration Django
-    │   ├── settings.py         # Paramètres Django
-    │   ├── urls.py            # Routes principales
-    │   └── wsgi.py            # Configuration WSGI
-    ├── store/                  # Application principale
-    │   ├── models.py          # Modèles de données
-    │   ├── views.py           # Vues API
-    │   ├── serializers.py     # Serializers DRF
-    │   ├── urls.py            # Routes API
-    │   └── admin.py           # Configuration admin
-    ├── manage.py              # Gestionnaire Django
-    ├── init_db.py             # Script d'initialisation
-    └── requirements.txt       # Dépendances Python
+src/                        Frontend React
+├── components/             Composants (Header, Footer, CarteProduit, ui/...)
+├── pages/                  Pages publiques (Accueil, Catalogue, Panier, Commande, Compte...)
+├── pages/admin/             Dashboard admin (Produits, Promotions, Catégories, Commandes, Utilisateurs, Rapports)
+├── contexts/                AuthContext, PanierContext, FavorisContext
+├── hooks/                    Hooks React Query (produits, catégories)
+└── lib/api.ts                Client API (JWT, requêtes JSON/multipart)
+
+backend/                    Backend Django
+├── ecommerce/                Configuration (settings, urls)
+└── store/
+    ├── models.py              Categorie, Produit, Utilisateur, Panier, Article, Commande, LigneCommande, Favoris, Paiement
+    ├── views.py                Vues API (DRF viewsets + APIView)
+    ├── serializers.py
+    ├── urls.py
+    ├── mtn.py                  Intégration MTN Mobile Money (legacy, mode simulation par défaut)
+    ├── cinetpay.py             Intégration CinetPay (carte + Mobile Money, mode simulation par défaut)
+    ├── firebase_messaging.py   Notifications push FCM (mode simulation tant que non configuré)
+    ├── notifications.py        Création de notifications in-app (+ tentative push)
+    └── management/commands/seed_produits.py
 ```
 
-## 📚 API Endpoints
+## API — endpoints principaux
 
 ### Authentification
-- `POST /api/auth/inscription/` - Créer un compte
-- `POST /api/auth/connexion/` - Se connecter
+- `POST /api/auth/inscription/`
+- `POST /api/auth/connexion/`
+- `POST /api/auth/mot-de-passe-oublie/`
+- `POST /api/auth/reinitialiser-mot-de-passe/`
+- `POST /api/auth/admin_session/` — crée une session Django Admin depuis un JWT (dev only)
 
-### Produits
-- `GET /api/produits/` - Liste tous les produits
-- `GET /api/produits/{id}/` - Détails d'un produit
-- `GET /api/categories/` - Liste les catégories
+### Produits & catégories
+- `GET/POST /api/produits/` · `GET/PATCH/DELETE /api/produits/{id}/` (écriture réservée admin ; filtres `?categorie=`, `?nouveau=true`, `?promotion=true`, `?search=`)
+- `GET/POST /api/categories/` · `GET/PATCH/DELETE /api/categories/{id}/` (écriture réservée admin)
 
-### Utilisateur
-- `GET /api/utilisateurs/me/` - Profil utilisateur connecté
-- `PUT /api/utilisateurs/update_profile/` - Mettre à jour le profil
+### Compte
+- `GET /api/utilisateurs/me/`
+- `PUT /api/utilisateurs/update_profile/`
+- `POST /api/utilisateurs/changer_mot_de_passe/` — modifier son mot de passe (connecté, ancien mot de passe requis)
+- `POST /api/utilisateurs/register_fcm_token/` — enregistrer le token push Firebase de l'utilisateur
+- `GET /api/utilisateurs/list_all/` (admin)
+- `PATCH /api/utilisateurs/{id}/toggle_admin/` (admin)
+- `PATCH /api/utilisateurs/{id}/toggle_actif/` (admin)
 
 ### Panier
-- `GET /api/panier/current/` - Récupérer le panier
-- `POST /api/panier/add_article/` - Ajouter un article
-- `PUT /api/panier/update_article/` - Mettre à jour un article
-- `DELETE /api/panier/remove_article/` - Retirer un article
-- `POST /api/panier/clear/` - Vider le panier
+- `GET /api/panier/current/`
+- `POST /api/panier/add_article/` · `PUT /api/panier/update_article/` · `DELETE /api/panier/remove_article/?article_id=` · `POST /api/panier/clear/`
+
+### Favoris
+- `GET /api/favoris/myfavoris/` · `POST /api/favoris/add/` · `DELETE /api/favoris/remove/` · `GET /api/favoris/check/`
 
 ### Commandes
-- `GET /api/commandes/list_user_commandes/` - Historique des commandes
-- `POST /api/commandes/create_commande/` - Créer une commande
-- `GET /api/commandes/retrieve_commande/` - Détails d'une commande
+- `GET /api/commandes/list_user_commandes/`
+- `POST /api/commandes/create_from_items/`
+- `GET /api/commandes/list_all_commandes/` (admin) · `PATCH /api/commandes/update_status/?id=` (admin) · `GET /api/commandes/stats/` (admin, rapports)
 
-## 🔐 Authentification JWT
+### Paiements
+- `POST /api/paiements/cinetpay/initiate/` — crée le paiement et renvoie l'URL de la page CinetPay (carte bancaire, Orange Money, MTN, Wave)
+- `POST /api/paiements/cinetpay/notify/` — webhook serveur-à-serveur CinetPay
+- `GET /api/paiements/cinetpay/status/?transaction_id=` — statut du paiement pour la page de confirmation
+- `POST /api/paiements/mtn/initiate/`, `POST /api/paiements/mtn/webhook/` — intégration MTN directe (legacy)
 
-Les requêtes authentifiées doivent inclure le token dans l'en-tête:
+### Notifications
+- `GET /api/notifications/mes_notifications/` · `GET /api/notifications/non_lues_count/`
+- `PATCH /api/notifications/{id}/marquer_lu/` · `POST /api/notifications/marquer_tout_lu/`
+- Créées automatiquement : nouvelle commande (→ admins), changement de statut (→ client)
+
+### Newsletter
+- `POST /api/newsletter/inscrire/` (public) — inscription depuis le footer
+- `GET /api/newsletter/abonnes/` (admin) · `POST /api/newsletter/envoyer_campagne/` (admin, `{sujet, message}`)
+
+## Authentification JWT
 
 ```
 Authorization: Bearer <access_token>
 ```
 
-## 💾 Base de Données
+## Configuration paiement (CinetPay)
 
-### Modèles
-- **Utilisateur** - Gestion des comptes
-- **Categorie** - Catégories de produits
-- **Produit** - Produits avec prix, stock, images
-- **Panier** - Panier par utilisateur
-- **Article** - Articles dans le panier
-- **Commande** - Historique des commandes
-- **LigneCommande** - Détails des produits commandés
-
-## 🛠️ Configuration pour la Production
-
-### 1. Variables d'environnement (.env)
+Dans `backend/.env` :
 ```
-DEBUG=False
-SECRET_KEY=<generated-secret-key>
-ALLOWED_HOSTS=your-domain.com
-CORS_ALLOWED_ORIGINS=https://your-domain.com
+CINETPAY_API_KEY=
+CINETPAY_SITE_ID=
+CINETPAY_NOTIFY_URL=http://localhost:8000/api/paiements/cinetpay/notify/
+FRONTEND_URL=http://localhost:5173
 ```
+Tant que `CINETPAY_API_KEY`/`CINETPAY_SITE_ID` sont vides, l'intégration fonctionne en **mode simulation** (aucun compte marchand requis) : le paiement est automatiquement marqué comme réussi pour permettre de tester le flux de bout en bout. Renseigner les clés d'un compte CinetPay (sandbox ou production) pour un paiement réel.
 
-### 2. Base de données PostgreSQL
-Modifier `backend/ecommerce/settings.py` pour utiliser PostgreSQL:
+## Notifications push (Firebase, optionnel)
 
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ecommerce',
-        'USER': 'postgres',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+Le système de notifications **in-app fonctionne sans aucune configuration** (cloche dans le header et le dashboard admin). Pour ajouter un canal push réel via Firebase Cloud Messaging (gratuit) :
+```
+FIREBASE_CREDENTIALS_PATH=/chemin/vers/service-account.json
+```
+Sans ce fichier, l'envoi push est simulé (journalisé côté serveur) — aucune erreur, juste pas d'envoi réel.
+
+## Email newsletter
+
+Par défaut, les emails de campagne s'affichent dans la console du serveur Django (aucun compte SMTP requis pour tester). Pour un envoi réel, par exemple avec Gmail (mot de passe d'application requis) :
+```
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST_USER=votre-adresse@gmail.com
+EMAIL_HOST_PASSWORD=mot-de-passe-application
+DEFAULT_FROM_EMAIL=BelleBoutique <votre-adresse@gmail.com>
 ```
 
-### 3. Déployer avec Gunicorn
-```bash
-pip install gunicorn
-gunicorn ecommerce.wsgi:application --bind 0.0.0.0:8000
-```
+## Déploiement en production
 
-### 4. Build du Frontend
-```bash
-npm run build
-# Les fichiers seront dans le dossier dist/
-```
+1. `.env` : `DEBUG=False`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, clés CinetPay réelles.
+2. Passer à PostgreSQL dans `backend/ecommerce/settings.py`.
+3. `gunicorn ecommerce.wsgi:application --bind 0.0.0.0:8000`
+4. `npm run build` → sert le contenu de `dist/`.
 
-## 📊 Gestion Admin
+## Dépannage
 
-L'interface d'administration Django permet:
+- **Le frontend ne peut pas se connecter au backend** : vérifier que Django tourne sur le port 8000 et `VITE_API_URL` côté frontend. En développement, le CORS accepte automatiquement n'importe quel port `localhost`/`127.0.0.1` (utile quand Vite change de port parce que 5173/8080/8081 sont déjà pris).
+- **Migrations manquantes** : `cd backend && python manage.py migrate`.
+- **Base vide** : `python manage.py seed_produits`.
 
-- ✅ Gestion complète des produits
-- ✅ Gestion des catégories
-- ✅ Gestion des utilisateurs
-- ✅ Suivi des commandes
-- ✅ Gestion des paniers
-- ✅ Création d'administrateurs supplémentaires
+## Technologies
 
-Accès: http://localhost:8000/admin
-
-## 🐛 Dépannage
-
-### Le frontend ne peut pas se connecter au backend
-- Vérifier que Django s'exécute sur le port 8000
-- Vérifier les paramètres CORS dans `backend/ecommerce/settings.py`
-- Vérifier que le frontend utilise l'URL correcte pour l'API
-
-### Migrations non appliquées
-```bash
-cd backend
-python manage.py migrate
-```
-
-### Réinitialiser la base de données
-```bash
-cd backend
-python manage.py flush  # Attention: supprime toutes les données
-python init_db.py       # Réinitialise avec les données de base
-```
-
-## 📝 Technologies Utilisées
-
-### Frontend
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- Shadcn/ui
-- React Query
-- React Router
-
-### Backend
-- Django 4.2
-- Django REST Framework
-- djangorestframework-simplejwt
-- django-cors-headers
-- PostgreSQL (production)
-- SQLite (développement)
-
-## 📄 License
-
-Ce projet est fourni à titre d'exemple éducatif.
-
-## 👥 Support
-
-Pour toute question ou problème:
-1. Consultez la documentation Django: https://docs.djangoproject.com
-2. Consultez la documentation React: https://react.dev
-3. Consultez le code des exemples fournis
-
----
-
-**Version**: 1.0.0  
-**Dernière mise à jour**: Février 2026
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **Frontend** : React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, React Router, Recharts.
+- **Backend** : Django, Django REST Framework, djangorestframework-simplejwt, django-cors-headers, SQLite (dev) / PostgreSQL (prod).

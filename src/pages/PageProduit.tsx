@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Heart, Minus, Plus, ShoppingBag, Truck, RefreshCw, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { produits, formaterPrix, calculerReduction, Produit } from '@/data/produits';
+import { formaterPrix, calculerReduction } from '@/data/produits';
+import { useProduits } from '@/hooks/useProduits';
 import { usePanier } from '@/contexts/PanierContext';
 import { useFavoris } from '@/contexts/FavorisContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { ProtectionConnexion } from '@/components/ProtectionConnexion';
 import CarteProduit from '@/components/CarteProduit';
 import { toast } from 'sonner';
 
@@ -15,9 +14,8 @@ const PageProduit: React.FC = () => {
   const navigate = useNavigate();
   const { ajouterAuPanier } = usePanier();
   const { isFavoris, toggleFavoris } = useFavoris();
-  const { estConnecte } = useAuth();
-  const [showProtection, setShowProtection] = useState(false);
 
+  const { data: produits = [], isLoading } = useProduits();
   const produit = produits.find((p) => p.id === id);
 
   const [quantite, setQuantite] = useState(1);
@@ -28,6 +26,14 @@ const PageProduit: React.FC = () => {
     produit?.couleurs?.[0]
   );
   const [imageActive, setImageActive] = useState(0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   if (!produit) {
     return (
@@ -228,7 +234,6 @@ const PageProduit: React.FC = () => {
                     : 'hover:bg-secondary hover:text-primary'
                 }`}
                 onClick={() => {
-                  if (!estConnecte) { setShowProtection(true); return; }
                   if (produit) toggleFavoris(produit.id);
                 }}
                 aria-label="Ajouter aux favoris"
@@ -254,12 +259,6 @@ const PageProduit: React.FC = () => {
             </div>
           </div>
         </div>
-
-      <ProtectionConnexion
-        open={showProtection}
-        onOpenChange={setShowProtection}
-        action="ajouter aux favoris"
-      />
 
         {/* Produits similaires */}
         {produitsSimilaires.length > 0 && (

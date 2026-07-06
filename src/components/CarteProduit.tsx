@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { Produit, formaterPrix, calculerReduction } from '@/data/produits';
 import { usePanier } from '@/contexts/PanierContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { useFavoris } from '@/contexts/FavorisContext';
-import { ProtectionConnexion } from './ProtectionConnexion';
 import { toast } from 'sonner';
 
 interface CarteProduitProps {
@@ -14,20 +12,13 @@ interface CarteProduitProps {
 
 const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
   const { ajouterAuPanier } = usePanier();
-  const { estConnecte } = useAuth();
   const { isFavoris, toggleFavoris } = useFavoris();
-  const [showProtection, setShowProtection] = useState(false);
 
   const estFavoris = isFavoris(produit.id);
 
   const gererAjoutPanier = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!estConnecte) {
-      setShowProtection(true);
-      return;
-    }
 
     ajouterAuPanier(produit);
     toast.success('Article ajouté au panier ! 🛍️', {
@@ -39,16 +30,10 @@ const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!estConnecte) {
-      setShowProtection(true);
-      return;
-    }
-
     await toggleFavoris(produit.id);
   };
 
   return (
-    <>
       <Link
         to={`/produit/${produit.id}`}
         className="group card-product block animate-fade-in"
@@ -134,13 +119,6 @@ const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
           )}
         </div>
       </Link>
-
-      <ProtectionConnexion
-        open={showProtection}
-        onOpenChange={setShowProtection}
-        action="effectuer cette action"
-      />
-    </>
   );
 };
 

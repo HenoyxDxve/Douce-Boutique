@@ -3,14 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePanier } from '@/contexts/PanierContext';
+import { useFraisLivraison } from '@/hooks/useFraisLivraison';
 import { formaterPrix } from '@/data/produits';
 import { toast } from 'sonner';
 
 const Panier: React.FC = () => {
   const navigate = useNavigate();
   const { articles, retirerDuPanier, modifierQuantite, totalPanier, nombreArticles, viderPanier } = usePanier();
+  const { fraisLivraison } = useFraisLivraison();
 
-  const fraisLivraison = totalPanier >= 50000 ? 0 : 2500;
   const totalCommande = totalPanier + fraisLivraison;
 
   if (articles.length === 0) {
@@ -159,11 +160,6 @@ const Panier: React.FC = () => {
                     {fraisLivraison === 0 ? 'Gratuite' : formaterPrix(fraisLivraison)}
                   </span>
                 </div>
-                {fraisLivraison > 0 && (
-                  <p className="text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg">
-                    🎁 Plus que {formaterPrix(50000 - totalPanier)} pour la livraison gratuite !
-                  </p>
-                )}
                 <div className="border-t border-border pt-4 flex justify-between">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-primary">{formaterPrix(totalCommande)}</span>

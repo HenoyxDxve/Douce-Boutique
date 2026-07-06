@@ -3,18 +3,30 @@ import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import WhatsAppIcon from '@/components/WhatsAppIcon';
+import apiService from '@/lib/api';
 import { toast } from 'sonner';
+
+const WHATSAPP_NUMERO = '22551877745';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [envoi, setEnvoi] = useState(false);
 
-  const gererInscriptionNewsletter = (e: React.FormEvent) => {
+  const gererInscriptionNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+    setEnvoi(true);
+    try {
+      await apiService.inscrireNewsletter(email);
       toast.success('Merci pour votre inscription ! 💕', {
         description: 'Vous recevrez bientôt nos offres exclusives.',
       });
       setEmail('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'inscription');
+    } finally {
+      setEnvoi(false);
     }
   };
 
@@ -38,8 +50,8 @@ const Footer: React.FC = () => {
               className="flex-1 bg-background/90 border-0 text-foreground placeholder:text-muted-foreground"
               required
             />
-            <Button type="submit" className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-8">
-              S'inscrire
+            <Button type="submit" disabled={envoi} className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-8">
+              {envoi ? 'Inscription...' : "S'inscrire"}
             </Button>
           </form>
         </div>
@@ -115,8 +127,21 @@ const Footer: React.FC = () => {
                 <span>+225 0575964494</span>
               </li>
               <li className="flex items-center gap-2">
+                <WhatsAppIcon size={16} className="text-primary flex-shrink-0" />
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMERO}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  Discuter sur WhatsApp
+                </a>
+              </li>
+              <li className="flex items-center gap-2">
                 <Mail size={16} className="text-primary flex-shrink-0" />
-                <span>contact@belleboutique.ci</span>
+                <a href="mailto:gayemarcdavidble@gmail.com" className="hover:text-primary transition-colors">
+                  gayemarcdavidble@gmail.com
+                </a>
               </li>
             </ul>
             <div className="mt-4 pt-4 border-t border-background/20">

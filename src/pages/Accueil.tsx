@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, Shield, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CarteProduit from '@/components/CarteProduit';
-import { produits, categories } from '@/data/produits';
+import { useProduits, useCategories } from '@/hooks/useProduits';
 import heroBanner from '@/assets/hero-banner.jpg';
 
 const Accueil: React.FC = () => {
+  const { data: produits = [] } = useProduits();
+  const { data: categories = [] } = useCategories();
   const produitsEnPromo = produits.filter((p) => p.enPromotion).slice(0, 4);
   const produitsNouveaux = produits.filter((p) => p.nouveau).slice(0, 4);
   const produitsPophulaires = produits.slice(0, 4);

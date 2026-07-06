@@ -72,7 +72,7 @@ class Utilisateur(models.Model):
     adresse = models.CharField(max_length=255, blank=True)
     ville = models.CharField(max_length=100, blank=True)
     code_postal = models.CharField(max_length=20, blank=True)
-    pays = models.CharField(max_length=100, default='France')
+    pays = models.CharField(max_length=100, default="Côte d'Ivoire")
     est_actif = models.BooleanField(default=True)
     est_admin = models.BooleanField(default=False)
     date_inscription = models.DateTimeField(auto_now_add=True)
@@ -81,7 +81,13 @@ class Utilisateur(models.Model):
     # Tokens de récupération mot de passe
     token_reset_password = models.CharField(max_length=255, blank=True, null=True)
     token_reset_expires = models.DateTimeField(blank=True, null=True)
-    
+
+    # Notifications push (Firebase Cloud Messaging)
+    fcm_token = models.CharField(max_length=255, blank=True, null=True)
+
+    # Connexion Google (Sign-In)
+    google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+
     class Meta:
         ordering = ('-date_inscription',)
         indexes = [
@@ -156,25 +162,44 @@ class Article(models.Model):
 class Commande(models.Model):
     """Modèle pour les commandes"""
     STATUTS = [
-        ('en_attente', 'En attente'),
+        ('en_attente', 'Reçue'),
         ('confirmee', 'Confirmée'),
-        ('expedie', 'Expédiée'),
+        ('en_preparation', 'En préparation'),
+        ('en_livraison', 'En livraison'),
         ('livree', 'Livrée'),
         ('annulee', 'Annulée'),
     ]
-    
+
+    MODES_PAIEMENT = [
+        ('livraison', 'Paiement à la livraison'),
+        ('mobile_money_direct', 'Mobile Money direct'),
+        ('cinetpay', 'CinetPay (carte + Mobile Money)'),
+    ]
+
+    STATUTS_PAIEMENT = [
+        ('en_attente', 'En attente'),
+        ('paye', 'Payé'),
+        ('echoue', 'Échoué'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     numero = models.CharField(max_length=50, unique=True, editable=False)
     utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE, related_name='commandes')
     statut = models.CharField(max_length=20, choices=STATUTS, default='en_attente')
     prix_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+    frais_livraison = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    mode_paiement = models.CharField(max_length=30, choices=MODES_PAIEMENT, default='livraison')
+    statut_paiement = models.CharField(max_length=20, choices=STATUTS_PAIEMENT, default='en_attente')
+
     # Adresse de livraison
+    telephone_livraison = models.CharField(max_length=20, blank=True, default='')
     adresse_livraison = models.CharField(max_length=255)
     ville_livraison = models.CharField(max_length=100)
-    code_postal_livraison = models.CharField(max_length=20)
-    pays_livraison = models.CharField(max_length=100, default='France')
-    
+    code_postal_livraison = models.CharField(max_length=20, blank=True, default='')
+    pays_livraison = models.CharField(max_length=100, default="Côte d'Ivoire")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
     notes = models.TextField(blank=True)
     date_commande = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
@@ -188,7 +213,12 @@ class Commande(models.Model):
     
     def __str__(self):
         return f"Commande {self.numero}"
-    
+
+    @property
+    def montant_produits(self):
+        """Sous-total des produits, hors frais de livraison."""
+        return self.prix_total - self.frais_livraison
+
     def save(self, *args, **kwargs):
         if not self.numero:
             from datetime import datetime
@@ -222,11 +252,130 @@ class Favoris(models.Model):
     utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE, related_name='favoris')
     produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name='favoris_de')
     date_ajout = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ('-date_ajout',)
         unique_together = ('utilisateur', 'produit')
         verbose_name_plural = "Favoris"
-    
+
     def __str__(self):
         return f"{self.utilisateur.nom_complet} ❤ {self.produit.nom}"
+
+class Paiement(models.Model):
+    """Modèle pour les paiements en ligne (CinetPay)"""
+    MODES = [
+        ('cinetpay', 'CinetPay'),
+    ]
+    STATUTS = [
+        ('en_attente', 'En attente'),
+        ('reussi', 'Réussi'),
+        ('echoue', 'Échoué'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paiements')
+    mode = models.CharField(max_length=20, choices=MODES, default='cinetpay')
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_attente')
+    transaction_id = models.CharField(max_length=100, unique=True)
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    canal = models.CharField(max_length=50, blank=True)  # ex: MOBILE_MONEY, CREDIT_CARD, WALLET
+    donnees_brutes = models.JSONField(default=dict, blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('-date_creation',)
+
+    def __str__(self):
+        return f"Paiement {self.transaction_id} ({self.statut})"
+
+class Notification(models.Model):
+    """Notification in-app pour un utilisateur (client ou admin)."""
+    TYPES = [
+        ('commande', 'Commande'),
+        ('promotion', 'Promotion'),
+        ('info', 'Information'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE, related_name='notifications')
+    titre = models.CharField(max_length=200)
+    message = models.TextField(blank=True)
+    type = models.CharField(max_length=20, choices=TYPES, default='info')
+    lien = models.CharField(max_length=255, blank=True)
+    lu = models.BooleanField(default=False)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-date_creation',)
+        indexes = [
+            models.Index(fields=['utilisateur', 'lu']),
+        ]
+
+    def __str__(self):
+        return f"{self.titre} → {self.utilisateur.email}"
+
+class AbonneNewsletter(models.Model):
+    """Abonné à la newsletter (offres et réductions)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    actif = models.BooleanField(default=True)
+    token_desinscription = models.CharField(max_length=64, unique=True, editable=False, default='')
+    date_inscription = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-date_inscription',)
+        verbose_name = "Abonné newsletter"
+        verbose_name_plural = "Abonnés newsletter"
+
+    def __str__(self):
+        return self.email
+
+    def save(self, *args, **kwargs):
+        if not self.token_desinscription:
+            self.token_desinscription = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+
+class ParametresBoutique(models.Model):
+    """Réglages globaux de la boutique (singleton : une seule ligne)."""
+    frais_livraison = models.DecimalField(max_digits=10, decimal_places=2, default=1500, validators=[MinValueValidator(0)])
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Paramètres boutique"
+        verbose_name_plural = "Paramètres boutique"
+
+    def __str__(self):
+        return "Paramètres de la boutique"
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class NumeroPaiement(models.Model):
+    """Numéro Mobile Money géré par l'admin pour le paiement direct."""
+    OPERATEURS = [
+        ('orange', 'Orange Money'),
+        ('mtn', 'MTN Money'),
+        ('wave', 'Wave'),
+        ('moov', 'Moov Money'),
+        ('autre', 'Autre'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operateur = models.CharField(max_length=20, choices=OPERATEURS, default='orange')
+    numero = models.CharField(max_length=20)
+    nom_beneficiaire = models.CharField(max_length=150)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-actif', 'operateur')
+        verbose_name = "Numéro de paiement"
+        verbose_name_plural = "Numéros de paiement"
+
+    def __str__(self):
+        return f"{self.get_operateur_display()} — {self.numero} ({self.nom_beneficiaire})"

@@ -24,7 +24,8 @@ interface ContexteAuthType {
   chargement: boolean;
   erreur: string | null;
   inscription: (data: unknown) => Promise<any>;
-  connexion: (email: string, motDePasse: string) => Promise<void>;
+  connexion: (email: string, motDePasse: string) => Promise<Utilisateur>;
+  connexionGoogle: (idToken: string) => Promise<Utilisateur>;
   deconnexion: () => void;
   mettreAJourProfil: (data: unknown) => Promise<void>;
 }
@@ -79,9 +80,28 @@ export const ProviderAuth: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.access && response.refresh && response.utilisateur) {
         apiService.setTokens(response.access, response.refresh);
         setUtilisateur(response.utilisateur as Utilisateur);
+        return response.utilisateur as Utilisateur;
       }
+      throw new Error('Réponse de connexion invalide');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la connexion';
+      setErreur(message);
+      throw err;
+    }
+  };
+
+  const connexionGoogle = async (idToken: string) => {
+    try {
+      setErreur(null);
+      const response = await apiService.connexionGoogle(idToken);
+      if (response.access && response.refresh && response.utilisateur) {
+        apiService.setTokens(response.access, response.refresh);
+        setUtilisateur(response.utilisateur as Utilisateur);
+        return response.utilisateur as Utilisateur;
+      }
+      throw new Error('Réponse de connexion Google invalide');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la connexion Google';
       setErreur(message);
       throw err;
     }
@@ -117,6 +137,7 @@ export const ProviderAuth: React.FC<{ children: ReactNode }> = ({ children }) =>
     erreur,
     inscription,
     connexion,
+    connexionGoogle,
     deconnexion,
     mettreAJourProfil,
   };

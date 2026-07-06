@@ -4,11 +4,14 @@ import { Filter, ChevronDown, Grid, List, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import CarteProduit from '@/components/CarteProduit';
-import { produits, categories, Produit } from '@/data/produits';
+import { Produit } from '@/data/produits';
+import { useProduits, useCategories } from '@/hooks/useProduits';
 
 type TriOption = 'populaire' | 'prix-asc' | 'prix-desc' | 'nouveau';
 
 const Catalogue: React.FC = () => {
+  const { data: produits = [], isLoading } = useProduits();
+  const { data: categories = [] } = useCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtresOuverts, setFiltresOuverts] = useState(false);
   const [tri, setTri] = useState<TriOption>('populaire');
@@ -53,7 +56,7 @@ const Catalogue: React.FC = () => {
     }
 
     return resultat;
-  }, [categoriesSelectionnees, prixMax, afficherPromo, tri]);
+  }, [produits, categoriesSelectionnees, prixMax, afficherPromo, tri]);
 
   const gererCategorieChange = (catId: string) => {
     setCategoriesSelectionnees((prev) =>
@@ -182,7 +185,11 @@ const Catalogue: React.FC = () => {
             </div>
 
             {/* Grille de produits */}
-            {produitsFiltres.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+              </div>
+            ) : produitsFiltres.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {produitsFiltres.map((produit) => (
                   <CarteProduit key={produit.id} produit={produit} />

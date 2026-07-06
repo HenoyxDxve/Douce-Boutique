@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -15,49 +15,76 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePanier } from '@/contexts/PanierContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFraisLivraison } from '@/hooks/useFraisLivraison';
+import { ProtectionConnexion } from '@/components/ProtectionConnexion';
+import SelecteurPositionCarte from '@/components/SelecteurPositionCarte';
 import { formaterPrix } from '@/data/produits';
+import { validerTelephoneIvoirien } from '@/lib/validation';
 import apiService from '@/lib/api';
 import { toast } from 'sonner';
 
-type ModePaiement = 'livraison' | 'mtn' | 'orange' | 'wave';
+type ModePaiement = 'livraison' | 'mobile_money_direct' | 'en_ligne';
+
+interface NumeroPaiement {
+  id: string;
+  operateur_nom: string;
+  numero: string;
+  nom_beneficiaire: string;
+}
 
 const Commande: React.FC = () => {
   const navigate = useNavigate();
   const { articles, totalPanier, viderPanier, nombreArticles } = usePanier();
   const { utilisateur, estConnecte } = useAuth();
+  const { fraisLivraison } = useFraisLivraison();
 
-  const fraisLivraison = totalPanier >= 50000 ? 0 : 2500;
   const totalCommande = totalPanier + fraisLivraison;
 
   const [modePaiement, setModePaiement] = useState<ModePaiement>('livraison');
-  const [telephonePaiement, setTelephonePaiement] = useState(
-    utilisateur?.telephone || '',
-  );
   const [chargement, setChargement] = useState(false);
+  const [showProtection, setShowProtection] = useState(false);
+  const [numerosPaiement, setNumerosPaiement] = useState<NumeroPaiement[]>([]);
 
-  const [adresse, setAdresse] = useState({
+  const [adresse, setAdresse] = useState<{
+    telephone_livraison: string;
+    adresse_livraison: string;
+    ville_livraison: string;
+    code_postal_livraison: string;
+    pays_livraison: string;
+    notes: string;
+    latitude: number | null;
+    longitude: number | null;
+  }>({
+    telephone_livraison: utilisateur?.telephone || '',
     adresse_livraison: utilisateur?.adresse || '',
     ville_livraison: utilisateur?.ville || '',
     code_postal_livraison: utilisateur?.code_postal || '',
     pays_livraison: "Côte d'Ivoire",
     notes: '',
+    latitude: null,
+    longitude: null,
   });
 
-  if (!estConnecte) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-serif mb-4">Connexion requise</h1>
-          <p className="text-muted-foreground mb-6">
-            Veuillez vous connecter pour passer une commande.
-          </p>
-          <Link to="/connexion">
-            <Button className="btn-primary">Se connecter</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    apiService
+      .getNumerosPaiement()
+      .then((data) => setNumerosPaiement(Array.isArray(data) ? (data as NumeroPaiement[]) : []))
+      .catch(() => {/* silencieux */});
+  }, []);
+
+  // Le profil peut se charger de façon asynchrone après le montage (accès direct à
+  // l'URL) : on complète les champs encore vides dès qu'il devient disponible, sans
+  // écraser une saisie déjà en cours.
+  useEffect(() => {
+    if (!utilisateur) return;
+    setAdresse((p) => ({
+      ...p,
+      telephone_livraison: p.telephone_livraison || utilisateur.telephone || '',
+      adresse_livraison: p.adresse_livraison || utilisateur.adresse || '',
+      ville_livraison: p.ville_livraison || utilisateur.ville || '',
+      code_postal_livraison: p.code_postal_livraison || utilisateur.code_postal || '',
+    }));
+  }, [utilisateur]);
 
   if (articles.length === 0) {
     return (
@@ -74,17 +101,19 @@ const Commande: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adresse.adresse_livraison || !adresse.ville_livraison) {
-      toast.error('Veuillez renseigner votre adresse de livraison');
+    if (!adresse.telephone_livraison || !adresse.adresse_livraison || !adresse.ville_livraison) {
+      toast.error('Veuillez renseigner votre téléphone et votre adresse de livraison');
       return;
     }
-    if (
-      (modePaiement === 'mtn' ||
-        modePaiement === 'orange' ||
-        modePaiement === 'wave') &&
-      !telephonePaiement
-    ) {
-      toast.error('Veuillez saisir votre numéro de téléphone');
+
+    const erreurTelephone = validerTelephoneIvoirien(adresse.telephone_livraison);
+    if (erreurTelephone) {
+      toast.error(erreurTelephone);
+      return;
+    }
+
+    if (!estConnecte) {
+      setShowProtection(true);
       return;
     }
 
@@ -110,28 +139,24 @@ const Commande: React.FC = () => {
         return;
       }
 
-      toast.success('Commande créée !');
-
-      if (
-        modePaiement === 'mtn' ||
-        modePaiement === 'orange' ||
-        modePaiement === 'wave'
-      ) {
+      if (modePaiement === 'en_ligne') {
         try {
-          const paiement: any = await apiService.initiateMTNPayment(
+          const paiement: any = await apiService.initierPaiementCinetpay(
             commande.numero,
-            telephonePaiement,
           );
-          if (paiement?.reference_id) {
-            toast.success('Paiement initié — vérifiez votre téléphone 📱');
+          if (paiement?.payment_url) {
+            viderPanier();
+            window.location.href = paiement.payment_url;
+            return;
           }
         } catch {
           toast.error(
-            'Commande créée mais paiement mobile non initié. Contactez-nous.',
+            'Commande créée mais le paiement en ligne n\'a pas pu être initié. Contactez-nous.',
           );
         }
       }
 
+      toast.success('Commande créée !');
       viderPanier();
       navigate(`/confirmation?numero=${commande.numero}`);
     } catch (err: any) {
@@ -153,30 +178,21 @@ const Commande: React.FC = () => {
       description: 'Payez en espèces à la réception',
       icon: <Truck size={22} />,
     },
+    ...(numerosPaiement.length > 0
+      ? [{
+          id: 'mobile_money_direct' as ModePaiement,
+          label: 'Mobile Money direct',
+          description: 'Transfert manuel vers un de nos numéros',
+          icon: <Smartphone size={22} className="text-primary" />,
+        }]
+      : []),
     {
-      id: 'mtn',
-      label: 'MTN Mobile Money',
-      description: 'Paiement via MTN MoMo',
-      icon: <Smartphone size={22} className="text-yellow-500" />,
-    },
-    {
-      id: 'orange',
-      label: 'Orange Money',
-      description: 'Paiement via Orange Money',
-      icon: <Smartphone size={22} className="text-orange-500" />,
-    },
-    {
-      id: 'wave',
-      label: 'Wave',
-      description: 'Paiement via Wave',
-      icon: <CreditCard size={22} className="text-blue-500" />,
+      id: 'en_ligne',
+      label: 'Paiement en ligne',
+      description: 'Carte bancaire, Orange Money, MTN ou Wave',
+      icon: <CreditCard size={22} className="text-primary" />,
     },
   ];
-
-  const necessitePhone =
-    modePaiement === 'mtn' ||
-    modePaiement === 'orange' ||
-    modePaiement === 'wave';
 
   return (
     <div className="min-h-screen py-8 bg-secondary/30">
@@ -209,6 +225,23 @@ const Commande: React.FC = () => {
                 </h2>
                 <div className="space-y-4">
                   <div>
+                    <Label htmlFor="telephone_livraison">Téléphone</Label>
+                    <Input
+                      id="telephone_livraison"
+                      type="tel"
+                      value={adresse.telephone_livraison}
+                      onChange={(e) =>
+                        setAdresse((p) => ({
+                          ...p,
+                          telephone_livraison: e.target.value,
+                        }))
+                      }
+                      placeholder="+225 07 00 00 00 00"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="adresse">Adresse</Label>
                     <Input
                       id="adresse"
@@ -219,9 +252,28 @@ const Commande: React.FC = () => {
                           adresse_livraison: e.target.value,
                         }))
                       }
-                      placeholder="123 Rue de la Paix"
+                      placeholder="Cocody, Rue des Jardins, Lot 12"
                       required
                       className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 block">Localisation (optionnel)</Label>
+                    <SelecteurPositionCarte
+                      position={
+                        adresse.latitude != null && adresse.longitude != null
+                          ? { latitude: adresse.latitude, longitude: adresse.longitude }
+                          : null
+                      }
+                      onPositionChange={(pos, geo) =>
+                        setAdresse((p) => ({
+                          ...p,
+                          latitude: pos.latitude,
+                          longitude: pos.longitude,
+                          adresse_livraison: !p.adresse_livraison && geo?.texte ? geo.texte : p.adresse_livraison,
+                          ville_livraison: !p.ville_livraison && geo?.ville ? geo.ville : p.ville_livraison,
+                        }))
+                      }
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -242,7 +294,7 @@ const Commande: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="cp">Code postal</Label>
+                      <Label htmlFor="cp">Boîte postale (optionnel)</Label>
                       <Input
                         id="cp"
                         value={adresse.code_postal_livraison}
@@ -252,7 +304,7 @@ const Commande: React.FC = () => {
                             code_postal_livraison: e.target.value,
                           }))
                         }
-                        placeholder="00000"
+                        placeholder="01 BP 1234 Abidjan 01"
                         className="mt-1"
                       />
                     </div>
@@ -328,29 +380,28 @@ const Commande: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Numéro de téléphone mobile money */}
-                {necessitePhone && (
+                {modePaiement === 'en_ligne' && (
                   <div className="mt-4 p-4 bg-secondary/50 rounded-xl">
-                    <Label htmlFor="telephone">
-                      Numéro{' '}
-                      {modePaiement === 'mtn'
-                        ? 'MTN'
-                        : modePaiement === 'orange'
-                          ? 'Orange'
-                          : 'Wave'}
-                    </Label>
-                    <Input
-                      id="telephone"
-                      type="tel"
-                      value={telephonePaiement}
-                      onChange={(e) => setTelephonePaiement(e.target.value)}
-                      placeholder="+225 07 00 00 00 00"
-                      required
-                      className="mt-1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Vous recevrez une demande de confirmation sur ce numéro.
+                    <p className="text-xs text-muted-foreground">
+                      Vous serez redirigé(e) vers une page de paiement sécurisée pour choisir votre moyen de paiement (carte bancaire, Orange Money, MTN Mobile Money ou Wave).
                     </p>
+                  </div>
+                )}
+
+                {modePaiement === 'mobile_money_direct' && (
+                  <div className="mt-4 p-4 bg-secondary/50 rounded-xl space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Effectuez le transfert vers l'un des numéros ci-dessous, puis confirmez votre commande. Nous vérifierons la réception avant expédition.
+                    </p>
+                    {numerosPaiement.map((n) => (
+                      <div key={n.id} className="flex items-center justify-between bg-card rounded-lg p-3">
+                        <div>
+                          <p className="text-sm font-medium">{n.operateur_nom}</p>
+                          <p className="text-xs text-muted-foreground">{n.nom_beneficiaire}</p>
+                        </div>
+                        <span className="font-mono text-sm font-semibold text-primary">{n.numero}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -446,6 +497,13 @@ const Commande: React.FC = () => {
           </div>
         </form>
       </div>
+
+      <ProtectionConnexion
+        open={showProtection}
+        onOpenChange={setShowProtection}
+        action="finaliser votre commande"
+        from="/commande"
+      />
     </div>
   );
 };

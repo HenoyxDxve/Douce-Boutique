@@ -18,7 +18,22 @@ interface FavorisContextType {
   recharger: () => Promise<void>;
 }
 
+const STORAGE_KEY = 'favoris_invite';
+
 const FavorisContext = createContext<FavorisContextType | undefined>(undefined);
+
+function lireLocal(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function ecrireLocal(ids: Set<string>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(ids)));
+}
 
 export const FavorisProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -27,11 +42,7 @@ export const FavorisProvider: React.FC<{ children: ReactNode }> = ({
   const [favorisIds, setFavorisIds] = useState<Set<string>>(new Set());
   const [chargement, setChargement] = useState(false);
 
-  const recharger = useCallback(async () => {
-    if (!estConnecte) {
-      setFavorisIds(new Set());
-      return;
-    }
+  const chargerDepuisServeur = useCallback(async () => {
     setChargement(true);
     try {
       const data: any = await apiService.getFavoris();
@@ -46,17 +57,49 @@ export const FavorisProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       setChargement(false);
     }
-  }, [estConnecte]);
+  }, []);
 
   useEffect(() => {
-    recharger();
-  }, [recharger]);
+    if (!estConnecte) {
+      setFavorisIds(lireLocal());
+      return;
+    }
+
+    const fusionnerEtCharger = async () => {
+      const locaux = lireLocal();
+      if (locaux.size > 0) {
+        for (const produitId of locaux) {
+          try {
+            await apiService.addToFavoris(produitId);
+          } catch {
+            /* produit possiblement invalide, on continue */
+          }
+        }
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      await chargerDepuisServeur();
+    };
+
+    fusionnerEtCharger();
+  }, [estConnecte, chargerDepuisServeur]);
 
   const isFavoris = (produitId: string) => favorisIds.has(produitId);
 
   const toggleFavoris = async (produitId: string) => {
-    if (!estConnecte) return;
     const estFavoris = favorisIds.has(produitId);
+
+    if (!estConnecte) {
+      setFavorisIds((prev) => {
+        const next = new Set(prev);
+        if (estFavoris) next.delete(produitId);
+        else next.add(produitId);
+        ecrireLocal(next);
+        return next;
+      });
+      toast.success(estFavoris ? 'Retiré des favoris' : 'Ajouté aux favoris ❤️');
+      return;
+    }
+
     // Optimistic update
     setFavorisIds((prev) => {
       const next = new Set(prev);
@@ -86,7 +129,7 @@ export const FavorisProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <FavorisContext.Provider
-      value={{ favorisIds, chargement, isFavoris, toggleFavoris, recharger }}
+      value={{ favorisIds, chargement, isFavoris, toggleFavoris, recharger: chargerDepuisServeur }}
     >
       {children}
     </FavorisContext.Provider>

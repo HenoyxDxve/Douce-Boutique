@@ -1,8 +1,9 @@
 import React from 'react';
 import CarteProduit from '@/components/CarteProduit';
-import { produits } from '@/data/produits';
+import { useProduits } from '@/hooks/useProduits';
 
 const Promotions: React.FC = () => {
+  const { data: produits = [], isLoading } = useProduits();
   const produitsEnPromo = produits.filter((p) => p.enPromotion);
 
   return (
@@ -30,7 +31,11 @@ const Promotions: React.FC = () => {
         </div>
 
         {/* Grille de produits */}
-        {produitsEnPromo.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+          </div>
+        ) : produitsEnPromo.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {produitsEnPromo.map((produit) => (
               <CarteProduit key={produit.id} produit={produit} />

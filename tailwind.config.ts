@@ -115,9 +115,9 @@ export default {
         "gradient-hero": "linear-gradient(180deg, hsl(var(--rose-light)) 0%, hsl(var(--background)) 100%)",
       },
       boxShadow: {
-        soft: "0 4px 20px -4px hsl(350 30% 70% / 0.15)",
-        card: "0 8px 30px -8px hsl(350 30% 60% / 0.12)",
-        hover: "0 12px 40px -12px hsl(350 40% 60% / 0.2)",
+        soft: "0 4px 20px -4px hsl(350 45% 50% / 0.18)",
+        card: "0 8px 30px -8px hsl(350 45% 42% / 0.16)",
+        hover: "0 14px 44px -12px hsl(350 50% 42% / 0.28)",
       },
     },
   },

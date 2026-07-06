@@ -1,42 +1,22 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { useFavoris } from '@/contexts/FavorisContext';
 import { usePanier } from '@/contexts/PanierContext';
-import { produits, formaterPrix } from '@/data/produits';
+import { formaterPrix } from '@/data/produits';
+import { useProduits } from '@/hooks/useProduits';
 import { toast } from 'sonner';
 
 export default function Favoris() {
-  const navigate = useNavigate();
-  const { estConnecte } = useAuth();
-  const { favorisIds, chargement, toggleFavoris } = useFavoris();
+  const { favorisIds, toggleFavoris, chargement: chargementFavoris } = useFavoris();
   const { ajouterAuPanier } = usePanier();
+  const { data: produits = [], isLoading: chargementProduits } = useProduits();
 
-  // Récupérer les produits locaux correspondant aux favoris
   const produitsFavoris = produits.filter((p) => favorisIds.has(p.id));
+  const isLoading = chargementProduits || chargementFavoris;
 
-  if (!estConnecte) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center animate-fade-in">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
-            <Heart size={36} className="text-red-400" />
-          </div>
-          <h1 className="text-2xl font-serif mb-3">Mes Favoris</h1>
-          <p className="text-muted-foreground mb-6">
-            Connectez-vous pour retrouver vos produits favoris.
-          </p>
-          <Link to="/connexion">
-            <Button className="btn-primary">Se connecter</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (chargement) {
+  if (isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />

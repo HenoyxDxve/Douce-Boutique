@@ -14,38 +14,95 @@ import apiService from '@/lib/api';
 import { formaterPrix } from '@/data/produits';
 
 const statutLabel: Record<string, string> = {
-  en_attente: 'En attente',
+  en_attente: 'Reçue',
   confirmee: 'Confirmée',
-  expedie: 'Expédiée',
+  en_preparation: 'En préparation',
+  en_livraison: 'En livraison',
   livree: 'Livrée',
   annulee: 'Annulée',
 };
 
 const statutCouleur: Record<string, string> = {
   en_attente: 'bg-yellow-100 text-yellow-700',
-  confirmee: 'bg-green-100 text-green-700',
-  expedie: 'bg-blue-100 text-blue-700',
+  confirmee: 'bg-blue-100 text-blue-700',
+  en_preparation: 'bg-purple-100 text-purple-700',
+  en_livraison: 'bg-indigo-100 text-indigo-700',
   livree: 'bg-emerald-100 text-emerald-700',
   annulee: 'bg-red-100 text-red-700',
+};
+
+const statutPaiementLabel: Record<string, string> = {
+  en_attente: 'Paiement en cours de vérification…',
+  reussi: 'Paiement confirmé ✅',
+  echoue: 'Le paiement a échoué',
 };
 
 const Confirmation: React.FC = () => {
   const [searchParams] = useSearchParams();
   const numero = searchParams.get('numero');
+  const transactionId = searchParams.get('transaction_id');
   const [commande, setCommande] = useState<any>(null);
   const [chargement, setChargement] = useState(true);
+  const [statutPaiement, setStatutPaiement] = useState<string | null>(null);
 
+  // Rafraîchit périodiquement le statut de la commande : si l'admin la fait
+  // avancer pendant que le client est sur cette page, il le voit sans recharger.
   useEffect(() => {
     if (!numero) {
       setChargement(false);
       return;
     }
-    apiService
-      .getCommande(numero)
-      .then((data) => setCommande(data))
-      .catch(() => {/* silencieux */})
-      .finally(() => setChargement(false));
+    let annule = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const charger = () => {
+      apiService
+        .getCommande(numero)
+        .then((data: any) => {
+          if (annule) return;
+          setCommande(data);
+          if (data && !['livree', 'annulee'].includes(data.statut)) {
+            timeoutId = setTimeout(charger, 8000);
+          }
+        })
+        .catch(() => {/* silencieux */})
+        .finally(() => setChargement(false));
+    };
+
+    charger();
+    return () => {
+      annule = true;
+      clearTimeout(timeoutId);
+    };
   }, [numero]);
+
+  useEffect(() => {
+    if (!transactionId) return;
+
+    let annule = false;
+    let tentatives = 0;
+
+    const verifier = () => {
+      apiService
+        .getStatutPaiementCinetpay(transactionId)
+        .then((data: any) => {
+          if (annule) return;
+          setStatutPaiement(data.statut);
+          if (data.statut === 'en_attente' && tentatives < 5) {
+            tentatives += 1;
+            setTimeout(verifier, 3000);
+          } else if (data.statut === 'reussi') {
+            apiService.getCommande(numero!).then((cmd) => !annule && setCommande(cmd)).catch(() => {});
+          }
+        })
+        .catch(() => {/* silencieux */});
+    };
+
+    verifier();
+    return () => {
+      annule = true;
+    };
+  }, [transactionId, numero]);
 
   if (chargement) {
     return (
@@ -72,6 +129,22 @@ const Confirmation: React.FC = () => {
           {commande?.numero && (
             <p className="mt-2 text-sm font-mono bg-secondary inline-block px-3 py-1 rounded-full">
               #{commande.numero}
+            </p>
+          )}
+          {transactionId && statutPaiement && (
+            <p
+              className={`mt-3 text-sm font-medium inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                statutPaiement === 'reussi'
+                  ? 'bg-green-100 text-green-700'
+                  : statutPaiement === 'echoue'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-yellow-100 text-yellow-700'
+              }`}
+            >
+              {statutPaiement === 'en_attente' && (
+                <Loader2 size={14} className="animate-spin" />
+              )}
+              {statutPaiementLabel[statutPaiement] || statutPaiement}
             </p>
           )}
         </div>
@@ -151,11 +224,25 @@ const Confirmation: React.FC = () => {
             )}
 
             {/* Total */}
-            <div className="p-6 flex justify-between items-center">
-              <span className="font-semibold">Total payé</span>
-              <span className="text-xl font-bold text-primary">
-                {formaterPrix(parseFloat(commande.prix_total))}
-              </span>
+            <div className="p-6 space-y-2">
+              {commande.montant_produits !== undefined && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Sous-total produits</span>
+                  <span>{formaterPrix(parseFloat(commande.montant_produits))}</span>
+                </div>
+              )}
+              {commande.frais_livraison !== undefined && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Frais de livraison</span>
+                  <span>{formaterPrix(parseFloat(commande.frais_livraison))}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-border">
+                <span className="font-semibold">Total</span>
+                <span className="text-xl font-bold text-primary">
+                  {formaterPrix(parseFloat(commande.prix_total))}
+                </span>
+              </div>
             </div>
           </div>
         ) : (

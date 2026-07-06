@@ -1,62 +1,189 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Produit } from '@/data/produits';
+import { useAuth } from './AuthContext';
+import apiService from '@/lib/api';
+import { adaptProduit } from '@/lib/adaptProduit';
+import { toast } from 'sonner';
 
 export interface ArticlePanier {
   produit: Produit;
   quantite: number;
   taille?: string;
   couleur?: string;
+  articleId?: string;
 }
 
 interface PanierContextType {
   articles: ArticlePanier[];
-  ajouterAuPanier: (produit: Produit, quantite?: number, taille?: string, couleur?: string) => void;
-  retirerDuPanier: (produitId: string) => void;
-  modifierQuantite: (produitId: string, quantite: number) => void;
-  viderPanier: () => void;
+  ajouterAuPanier: (produit: Produit, quantite?: number, taille?: string, couleur?: string) => Promise<void>;
+  retirerDuPanier: (produitId: string) => Promise<void>;
+  modifierQuantite: (produitId: string, quantite: number) => Promise<void>;
+  viderPanier: () => Promise<void>;
   nombreArticles: number;
   totalPanier: number;
 }
 
+const STORAGE_KEY = 'panier_invite';
+
 const PanierContext = createContext<PanierContextType | undefined>(undefined);
 
+interface ArticleAPI {
+  id: string;
+  produit: import('@/types/produit').ProduitAPI;
+  quantite: number;
+  taille?: string;
+  couleur?: string;
+}
+
+function adaptArticles(articlesAPI: ArticleAPI[]): ArticlePanier[] {
+  return articlesAPI.map((a) => ({
+    produit: adaptProduit(a.produit, new Map()),
+    quantite: a.quantite,
+    taille: a.taille || undefined,
+    couleur: a.couleur || undefined,
+    articleId: a.id,
+  }));
+}
+
+function lireLocal(): ArticlePanier[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function ecrireLocal(articles: ArticlePanier[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
+}
+
 export const PanierProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { estConnecte } = useAuth();
   const [articles, setArticles] = useState<ArticlePanier[]>([]);
 
-  const ajouterAuPanier = (produit: Produit, quantite = 1, taille?: string, couleur?: string) => {
-    setArticles((prev) => {
-      const articleExistant = prev.find(
-        (a) => a.produit.id === produit.id && a.taille === taille && a.couleur === couleur
-      );
+  const chargerPanierServeur = useCallback(async () => {
+    try {
+      const data: any = await apiService.getPanier();
+      setArticles(adaptArticles(data.articles || []));
+    } catch {
+      /* silencieux */
+    }
+  }, []);
 
-      if (articleExistant) {
-        return prev.map((a) =>
-          a.produit.id === produit.id && a.taille === taille && a.couleur === couleur
-            ? { ...a, quantite: a.quantite + quantite }
-            : a
-        );
-      }
-
-      return [...prev, { produit, quantite, taille, couleur }];
-    });
-  };
-
-  const retirerDuPanier = (produitId: string) => {
-    setArticles((prev) => prev.filter((a) => a.produit.id !== produitId));
-  };
-
-  const modifierQuantite = (produitId: string, quantite: number) => {
-    if (quantite <= 0) {
-      retirerDuPanier(produitId);
+  useEffect(() => {
+    if (!estConnecte) {
+      setArticles(lireLocal());
       return;
     }
-    setArticles((prev) =>
-      prev.map((a) => (a.produit.id === produitId ? { ...a, quantite } : a))
-    );
+
+    const fusionnerEtCharger = async () => {
+      const localArticles = lireLocal();
+      if (localArticles.length > 0) {
+        for (const a of localArticles) {
+          try {
+            await apiService.addArticlePanier({
+              produit_id: a.produit.id,
+              quantite: a.quantite,
+              taille: a.taille,
+              couleur: a.couleur,
+            });
+          } catch {
+            /* article possiblement invalide, on continue */
+          }
+        }
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      await chargerPanierServeur();
+    };
+
+    fusionnerEtCharger();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estConnecte]);
+
+  const ajouterAuPanier = async (produit: Produit, quantite = 1, taille?: string, couleur?: string) => {
+    if (!estConnecte) {
+      setArticles((prev) => {
+        const existant = prev.find(
+          (a) => a.produit.id === produit.id && a.taille === taille && a.couleur === couleur,
+        );
+        const next = existant
+          ? prev.map((a) =>
+              a.produit.id === produit.id && a.taille === taille && a.couleur === couleur
+                ? { ...a, quantite: a.quantite + quantite }
+                : a,
+            )
+          : [...prev, { produit, quantite, taille, couleur }];
+        ecrireLocal(next);
+        return next;
+      });
+      return;
+    }
+
+    try {
+      await apiService.addArticlePanier({ produit_id: produit.id, quantite, taille, couleur });
+      await chargerPanierServeur();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'ajout au panier');
+    }
   };
 
-  const viderPanier = () => {
-    setArticles([]);
+  const retirerDuPanier = async (produitId: string) => {
+    if (!estConnecte) {
+      setArticles((prev) => {
+        const next = prev.filter((a) => a.produit.id !== produitId);
+        ecrireLocal(next);
+        return next;
+      });
+      return;
+    }
+
+    const cibles = articles.filter((a) => a.produit.id === produitId && a.articleId);
+    try {
+      await Promise.all(cibles.map((a) => apiService.removeArticlePanier(a.articleId!)));
+      await chargerPanierServeur();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+    }
+  };
+
+  const modifierQuantite = async (produitId: string, quantite: number) => {
+    if (quantite <= 0) {
+      await retirerDuPanier(produitId);
+      return;
+    }
+
+    if (!estConnecte) {
+      setArticles((prev) => {
+        const next = prev.map((a) => (a.produit.id === produitId ? { ...a, quantite } : a));
+        ecrireLocal(next);
+        return next;
+      });
+      return;
+    }
+
+    const cible = articles.find((a) => a.produit.id === produitId && a.articleId);
+    if (!cible?.articleId) return;
+    try {
+      await apiService.updateArticlePanier(cible.articleId, quantite);
+      await chargerPanierServeur();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const viderPanier = async () => {
+    if (!estConnecte) {
+      setArticles([]);
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    try {
+      await apiService.clearPanier();
+      setArticles([]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du vidage du panier');
+    }
   };
 
   const nombreArticles = articles.reduce((total, a) => total + a.quantite, 0);

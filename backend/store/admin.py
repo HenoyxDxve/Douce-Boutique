@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Produit, Categorie, Utilisateur, Panier, Article, Commande, LigneCommande, Favoris
+from .models import (
+    Produit, Categorie, Utilisateur, Panier, Article, Commande, LigneCommande,
+    Favoris, Paiement, Notification, AbonneNewsletter, ParametresBoutique,
+    NumeroPaiement
+)
 
 # Customiser le site admin
 admin.site.site_header = "Administration - Douce Boutique"
@@ -109,3 +113,36 @@ class FavorisAdmin(admin.ModelAdmin):
     list_filter = ('date_ajout', 'utilisateur')
     search_fields = ('utilisateur__email', 'produit__nom')
     readonly_fields = ('date_ajout',)
+
+@admin.register(Paiement)
+class PaiementAdmin(admin.ModelAdmin):
+    list_display = ('transaction_id', 'commande', 'mode', 'statut', 'montant', 'canal', 'date_creation')
+    list_filter = ('mode', 'statut', 'date_creation')
+    search_fields = ('transaction_id', 'commande__numero')
+    readonly_fields = ('date_creation', 'date_modification')
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'utilisateur', 'type', 'lu', 'date_creation')
+    list_filter = ('type', 'lu', 'date_creation')
+    search_fields = ('titre', 'utilisateur__email')
+    readonly_fields = ('date_creation',)
+
+@admin.register(AbonneNewsletter)
+class AbonneNewsletterAdmin(admin.ModelAdmin):
+    list_display = ('email', 'actif', 'date_inscription')
+    list_filter = ('actif', 'date_inscription')
+    search_fields = ('email',)
+    readonly_fields = ('date_inscription', 'token_desinscription')
+
+@admin.register(ParametresBoutique)
+class ParametresBoutiqueAdmin(admin.ModelAdmin):
+    list_display = ('frais_livraison', 'date_modification')
+    readonly_fields = ('date_modification',)
+
+@admin.register(NumeroPaiement)
+class NumeroPaiementAdmin(admin.ModelAdmin):
+    list_display = ('operateur', 'numero', 'nom_beneficiaire', 'actif', 'date_creation')
+    list_filter = ('operateur', 'actif')
+    search_fields = ('numero', 'nom_beneficiaire')
+    readonly_fields = ('date_creation',)
