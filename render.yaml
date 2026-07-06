@@ -28,7 +28,7 @@ services:
     plan: free
     branch: production
     rootDir: backend
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py seed_produits"
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py seed_produits && python manage.py create_admin"
     startCommand: "gunicorn ecommerce.wsgi"
     envVars:
       - key: PYTHON_VERSION
@@ -64,4 +64,10 @@ services:
       - key: CINETPAY_API_KEY
         sync: false
       - key: CINETPAY_SITE_ID
+        sync: false
+      # Crée (ou promeut) ce compte en admin au déploiement — choisis un vrai
+      # email/mot de passe forts, ce ne sont pas des valeurs de démo.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false
