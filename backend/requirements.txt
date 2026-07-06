@@ -8,3 +8,5 @@ psycopg2-binary
 gunicorn
 google-auth
 requests
+dj-database-url
+whitenoise

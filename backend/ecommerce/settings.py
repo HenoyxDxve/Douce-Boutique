@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from decouple import config
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,25 +69,23 @@ WSGI_APPLICATION = 'ecommerce.wsgi.application'
 
 
 # Database
+# En local (pas de DATABASE_URL) : SQLite. En production (Render fournit
+# DATABASE_URL automatiquement dès qu'une base Postgres est attachée) : Postgres —
+# indispensable sur Render, dont le disque du service web n'est pas persistant
+# (un SQLite serait réinitialisé à chaque redéploiement/redémarrage).
+DATABASE_URL = config('DATABASE_URL', default='')
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-}
-
-# Pour utiliser PostgreSQL en production:
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': config('DB_NAME', default='ecommerce'),
-#         'USER': config('DB_USER', default='postgres'),
-#         'PASSWORD': config('DB_PASSWORD', default='password'),
-#         'HOST': config('DB_HOST', default='localhost'),
-#         'PORT': config('DB_PORT', default='5432'),
-#     }
-# }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -121,10 +121,21 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Sert les fichiers statiques (CSS/JS de Django Admin) directement depuis
+# gunicorn en production, sans serveur dédié (Whitenoise, gratuit et suffisant
+# à cette échelle).
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 
 # Default primary key field type
@@ -169,9 +180,13 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http://127\.0\.0\.1:\d+$',
 ] if DEBUG else []
 
-CORS_ALLOWED_ORIGINS = [] if DEBUG else [
-    # Renseigner ici les domaines de production réels.
-]
+# Domaine(s) réel(s) du frontend en production (ex: https://douce-boutique.vercel.app),
+# séparés par des virgules — à définir via la variable d'environnement CORS_ALLOWED_ORIGINS.
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='',
+    cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
