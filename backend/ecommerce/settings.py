@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'storages',
     'store',
 ]
 
@@ -136,6 +137,33 @@ STORAGES = {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
+
+# Stockage des médias (images produits) sur Cloudflare R2 (gratuit, compatible
+# S3). Indispensable en production : le disque des services Render (offre
+# gratuite) est réinitialisé à chaque déploiement, donc tout fichier écrit
+# localement (images uploadées) disparaît au déploiement suivant. Tant que
+# ces variables sont vides, on reste sur le stockage local (dev uniquement).
+R2_ACCESS_KEY_ID = config('R2_ACCESS_KEY_ID', default='')
+R2_SECRET_ACCESS_KEY = config('R2_SECRET_ACCESS_KEY', default='')
+R2_BUCKET_NAME = config('R2_BUCKET_NAME', default='')
+R2_ENDPOINT_URL = config('R2_ENDPOINT_URL', default='')
+R2_PUBLIC_URL = config('R2_PUBLIC_URL', default='')
+
+if R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME and R2_ENDPOINT_URL:
+    STORAGES['default'] = {'BACKEND': 'storages.backends.s3.S3Storage'}
+    AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = R2_BUCKET_NAME
+    AWS_S3_ENDPOINT_URL = R2_ENDPOINT_URL
+    AWS_S3_CUSTOM_DOMAIN = (
+        R2_PUBLIC_URL.replace('https://', '').replace('http://', '')
+        if R2_PUBLIC_URL else None
+    )
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    # True : réexécuter seed_produits à chaque déploiement remplace le même
+    # fichier au lieu d'en accumuler une copie à chaque fois.
+    AWS_S3_FILE_OVERWRITE = True
 
 
 # Default primary key field type

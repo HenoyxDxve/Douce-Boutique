@@ -10,3 +10,4 @@ google-auth
 requests
 dj-database-url
 whitenoise
+django-storages[s3]

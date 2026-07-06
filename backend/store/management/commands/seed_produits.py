@@ -114,10 +114,12 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"{'Créé' if created else 'Existe déjà'} : produit {produit.nom}")
 
-            if created and not produit.image_principale:
-                image_path = ASSETS_DIR / prod['image']
-                if image_path.exists():
-                    with open(image_path, 'rb') as f:
+            # Toujours (re)pousser l'image, même sur un produit déjà existant :
+            # le champ en base ne garantit pas que le fichier existe encore
+            # dans le stockage actif (utile lors du passage au stockage R2).
+            image_path = ASSETS_DIR / prod['image']
+            if image_path.exists():
+                with open(image_path, 'rb') as f:
                         produit.image_principale.save(prod['image'], File(f), save=True)
 
         self.stdout.write(self.style.SUCCESS('Seed terminé.'))
