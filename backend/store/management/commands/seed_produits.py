@@ -117,9 +117,14 @@ class Command(BaseCommand):
             # Toujours (re)pousser l'image, même sur un produit déjà existant :
             # le champ en base ne garantit pas que le fichier existe encore
             # dans le stockage actif (utile lors du passage au stockage R2).
+            # Non-bloquant : un souci de stockage (ex. permissions R2) ne doit
+            # jamais faire échouer tout le déploiement.
             image_path = ASSETS_DIR / prod['image']
             if image_path.exists():
-                with open(image_path, 'rb') as f:
+                try:
+                    with open(image_path, 'rb') as f:
                         produit.image_principale.save(prod['image'], File(f), save=True)
+                except Exception as e:
+                    self.stderr.write(f"Échec upload image {prod['image']} : {e}")
 
         self.stdout.write(self.style.SUCCESS('Seed terminé.'))

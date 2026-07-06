@@ -155,6 +155,11 @@ if R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME and R2_ENDPOINT_
     AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
     AWS_STORAGE_BUCKET_NAME = R2_BUCKET_NAME
     AWS_S3_ENDPOINT_URL = R2_ENDPOINT_URL
+    # Requis par R2 (endpoint S3-compatible mais pas AWS) : sans ces deux
+    # réglages, boto3 signe les requêtes pour une région AWS réelle et R2
+    # les rejette avec un 403 même si les identifiants sont corrects.
+    AWS_S3_REGION_NAME = 'auto'
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_S3_CUSTOM_DOMAIN = (
         R2_PUBLIC_URL.replace('https://', '').replace('http://', '')
         if R2_PUBLIC_URL else None
