@@ -35,9 +35,13 @@ class Command(BaseCommand):
         if created:
             Panier.objects.get_or_create(utilisateur=utilisateur)
             self.stdout.write(self.style.SUCCESS(f"Compte admin créé : {email}"))
-        elif not utilisateur.est_admin:
-            utilisateur.est_admin = True
-            utilisateur.save()
-            self.stdout.write(self.style.SUCCESS(f"{email} promu admin."))
         else:
-            self.stdout.write(f"{email} existe déjà et est déjà admin.")
+            # Resynchronise toujours mot de passe + statut admin depuis les
+            # variables d'environnement, même si le compte existait déjà
+            # (ex. créé par erreur avant que ADMIN_EMAIL/PASSWORD soient pris
+            # en compte) — ADMIN_PASSWORD fait autorité tant qu'il est défini.
+            utilisateur.mot_de_passe = make_password(mot_de_passe)
+            utilisateur.est_admin = True
+            utilisateur.est_actif = True
+            utilisateur.save()
+            self.stdout.write(self.style.SUCCESS(f"{email} mis à jour et promu admin."))
