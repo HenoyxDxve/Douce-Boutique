@@ -319,5 +319,5 @@ if BREVO_SMTP_LOGIN and BREVO_SMTP_KEY:
 
 # Connexion Google (Sign-In). Tant que GOOGLE_CLIENT_ID est vide, le bouton
 # Google reste inactif côté frontend et l'endpoint renvoie une erreur claire.
-GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='').strip()
 

@@ -16,7 +16,10 @@ declare global {
   }
 }
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+// .trim() : une variable d'environnement collée avec un espace ou un retour
+// à la ligne parasite (copier-coller depuis Render, un éditeur...) produirait
+// un client_id techniquement différent, que Google refuse avec "invalid_client".
+const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() || undefined;
 const SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
 function chargerScriptGoogle(): Promise<void> {
