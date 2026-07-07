@@ -698,6 +698,11 @@ class CommandeViewSet(viewsets.ViewSet):
 
         if mode_paiement not in dict(Commande.MODES_PAIEMENT):
             mode_paiement = 'livraison'
+        if mode_paiement == 'cinetpay' and not cinetpay_helper.is_configured():
+            # Ceinture et bretelles : le frontend cache déjà cette option tant
+            # que CinetPay n'est pas configuré, mais on ne fait pas confiance
+            # au client pour une requête directe à l'API.
+            mode_paiement = 'livraison'
 
         if not items:
             return Response({'erreur': 'Aucun article fourni'}, status=status.HTTP_400_BAD_REQUEST)

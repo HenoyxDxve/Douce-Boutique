@@ -402,7 +402,11 @@ class ApiService {
 
   // ---- Paramètres boutique ----
   getFraisLivraison() {
-    return this.request<{ frais_livraison: string; date_modification: string }>(
+    return this.request<{
+      frais_livraison: string;
+      date_modification: string;
+      paiement_en_ligne_disponible: boolean;
+    }>(
       'GET',
       '/parametres/livraison/',
     );

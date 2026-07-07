@@ -260,10 +260,19 @@ class CampagneNewsletterSerializer(serializers.Serializer):
 
 
 class ParametresBoutiqueSerializer(serializers.ModelSerializer):
+    # Le checkout n'affiche "Paiement en ligne" que si CinetPay est réellement
+    # configuré — évite de proposer une option qui simulerait un paiement
+    # sans jamais réellement encaisser le client.
+    paiement_en_ligne_disponible = serializers.SerializerMethodField()
+
     class Meta:
         model = ParametresBoutique
-        fields = ['frais_livraison', 'date_modification']
-        read_only_fields = ['date_modification']
+        fields = ['frais_livraison', 'date_modification', 'paiement_en_ligne_disponible']
+        read_only_fields = ['date_modification', 'paiement_en_ligne_disponible']
+
+    def get_paiement_en_ligne_disponible(self, obj):
+        from . import cinetpay
+        return cinetpay.is_configured()
 
 
 class NumeroPaiementSerializer(serializers.ModelSerializer):

@@ -8,5 +8,9 @@ export function useFraisLivraison() {
     staleTime: 5 * 60 * 1000,
   });
 
-  return { fraisLivraison: data ? Number(data.frais_livraison) : 0, ...rest };
+  return {
+    fraisLivraison: data ? Number(data.frais_livraison) : 0,
+    paiementEnLigneDisponible: data?.paiement_en_ligne_disponible ?? false,
+    ...rest,
+  };
 }

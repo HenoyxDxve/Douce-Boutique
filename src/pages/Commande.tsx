@@ -23,7 +23,7 @@ import { validerTelephoneIvoirien } from '@/lib/validation';
 import apiService from '@/lib/api';
 import { toast } from 'sonner';
 
-type ModePaiement = 'livraison' | 'mobile_money_direct' | 'en_ligne';
+type ModePaiement = 'livraison' | 'mobile_money_direct' | 'cinetpay';
 
 interface NumeroPaiement {
   id: string;
@@ -36,7 +36,7 @@ const Commande: React.FC = () => {
   const navigate = useNavigate();
   const { articles, totalPanier, viderPanier, nombreArticles } = usePanier();
   const { utilisateur, estConnecte } = useAuth();
-  const { fraisLivraison } = useFraisLivraison();
+  const { fraisLivraison, paiementEnLigneDisponible } = useFraisLivraison();
 
   const totalCommande = totalPanier + fraisLivraison;
 
@@ -139,7 +139,7 @@ const Commande: React.FC = () => {
         return;
       }
 
-      if (modePaiement === 'en_ligne') {
+      if (modePaiement === 'cinetpay') {
         try {
           const paiement: any = await apiService.initierPaiementCinetpay(
             commande.numero,
@@ -186,12 +186,14 @@ const Commande: React.FC = () => {
           icon: <Smartphone size={22} className="text-primary" />,
         }]
       : []),
-    {
-      id: 'en_ligne',
-      label: 'Paiement en ligne',
-      description: 'Carte bancaire, Orange Money, MTN ou Wave',
-      icon: <CreditCard size={22} className="text-primary" />,
-    },
+    ...(paiementEnLigneDisponible
+      ? [{
+          id: 'cinetpay' as ModePaiement,
+          label: 'Paiement en ligne',
+          description: 'Carte bancaire, Orange Money, MTN ou Wave',
+          icon: <CreditCard size={22} className="text-primary" />,
+        }]
+      : []),
   ];
 
   return (
@@ -380,7 +382,7 @@ const Commande: React.FC = () => {
                   ))}
                 </div>
 
-                {modePaiement === 'en_ligne' && (
+                {modePaiement === 'cinetpay' && (
                   <div className="mt-4 p-4 bg-secondary/50 rounded-xl">
                     <p className="text-xs text-muted-foreground">
                       Vous serez redirigé(e) vers une page de paiement sécurisée pour choisir votre moyen de paiement (carte bancaire, Orange Money, MTN Mobile Money ou Wave).
