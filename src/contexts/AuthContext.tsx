@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiService from '@/lib/api.ts';
 
+// Signale qu'une connexion Google vient de créer le compte plutôt que de
+// connecter un compte existant — le composant appelant doit alors inviter
+// l'utilisateur à s'authentifier de nouveau, sans traiter ça comme une erreur.
+export class CompteCreeError extends Error {}
+
 export interface Utilisateur {
   id: string;
   email: string;
@@ -24,7 +29,8 @@ interface ContexteAuthType {
   chargement: boolean;
   erreur: string | null;
   inscription: (data: unknown) => Promise<any>;
-  connexion: (email: string, motDePasse: string) => Promise<void>;
+  connexion: (email: string, motDePasse: string) => Promise<Utilisateur>;
+  connexionGoogle: (idToken: string) => Promise<Utilisateur>;
   deconnexion: () => void;
   mettreAJourProfil: (data: unknown) => Promise<void>;
 }
@@ -79,10 +85,34 @@ export const ProviderAuth: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.access && response.refresh && response.utilisateur) {
         apiService.setTokens(response.access, response.refresh);
         setUtilisateur(response.utilisateur as Utilisateur);
+        return response.utilisateur as Utilisateur;
       }
+      throw new Error('Réponse de connexion invalide');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la connexion';
       setErreur(message);
+      throw err;
+    }
+  };
+
+  const connexionGoogle = async (idToken: string) => {
+    try {
+      setErreur(null);
+      const response = await apiService.connexionGoogle(idToken);
+      if (response.compte_cree) {
+        // Comme pour l'inscription classique : la création du compte ne
+        // connecte pas automatiquement, il faut s'authentifier ensuite.
+        throw new CompteCreeError(response.message || 'Compte créé, veuillez vous authentifier.');
+      }
+      if (response.access && response.refresh && response.utilisateur) {
+        apiService.setTokens(response.access, response.refresh);
+        setUtilisateur(response.utilisateur as Utilisateur);
+        return response.utilisateur as Utilisateur;
+      }
+      throw new Error('Réponse de connexion Google invalide');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la connexion Google';
+      if (!(err instanceof CompteCreeError)) setErreur(message);
       throw err;
     }
   };
@@ -117,6 +147,7 @@ export const ProviderAuth: React.FC<{ children: ReactNode }> = ({ children }) =>
     erreur,
     inscription,
     connexion,
+    connexionGoogle,
     deconnexion,
     mettreAJourProfil,
   };

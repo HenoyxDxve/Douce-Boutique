@@ -11,6 +11,10 @@ urlpatterns = [
     path('api/', include('store.urls')),
 ]
 
+# Les fichiers statiques (CSS/JS de Django Admin) sont servis par Whitenoise
+# en production (voir MIDDLEWARE) ; seuls les médias (images produits) ont
+# encore besoin de cette route explicite hors DEBUG.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

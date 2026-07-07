@@ -1,27 +1,48 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, Shield, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CarteProduit from '@/components/CarteProduit';
-import { produits, categories } from '@/data/produits';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import Autoplay from 'embla-carousel-autoplay';
+import { useProduits, useCategories } from '@/hooks/useProduits';
 import heroBanner from '@/assets/hero-banner.jpg';
+import heroRobeFleurie from '@/assets/products/robe-fleurie.jpg';
+import heroRobeCocktail from '@/assets/products/robe-cocktail.jpg';
+
+const IMAGES_HERO = [heroBanner, heroRobeFleurie, heroRobeCocktail];
 
 const Accueil: React.FC = () => {
+  const { data: produits = [] } = useProduits();
+  const { data: categories = [] } = useCategories();
   const produitsEnPromo = produits.filter((p) => p.enPromotion).slice(0, 4);
   const produitsNouveaux = produits.filter((p) => p.nouveau).slice(0, 4);
   const produitsPophulaires = produits.slice(0, 4);
+  const autoplayHero = useRef(Autoplay({ delay: 4500, stopOnInteraction: false }));
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-[70vh] md:min-h-[80vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src={heroBanner}
-            alt="Collection Mode Féminine"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
+          <Carousel
+            opts={{ loop: true }}
+            plugins={[autoplayHero.current]}
+            className="w-full h-full"
+          >
+            <CarouselContent className="ml-0 h-full">
+              {IMAGES_HERO.map((image, index) => (
+                <CarouselItem key={image} className="pl-0 h-full min-h-[70vh] md:min-h-[80vh]">
+                  <img
+                    src={image}
+                    alt={`Collection Mode Féminine ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent pointer-events-none" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">

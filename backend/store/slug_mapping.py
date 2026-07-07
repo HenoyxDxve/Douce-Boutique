@@ -16,12 +16,12 @@ SLUG_TO_PRODUCT_NAME = {
 def get_product_by_slug_or_id(produit_id):
     """Récupère un produit par UUID ou slug"""
     from .models import Produit
-    import uuid
-    
+    from django.core.exceptions import ValidationError
+
     # Essayer d'abord comme UUID
     try:
         return Produit.objects.get(id=produit_id)
-    except (Produit.DoesNotExist, ValueError):
+    except (Produit.DoesNotExist, ValueError, ValidationError):
         pass
     
     # Essayer comme slug

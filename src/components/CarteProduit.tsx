@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag, Eye } from 'lucide-react';
+import { Heart, ShoppingBag } from 'lucide-react';
 import { Produit, formaterPrix, calculerReduction } from '@/data/produits';
 import { usePanier } from '@/contexts/PanierContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { ProtectionConnexion } from './ProtectionConnexion';
-import apiService from '@/lib/api.ts';
+import { useFavoris } from '@/contexts/FavorisContext';
 import { toast } from 'sonner';
 
 interface CarteProduitProps {
@@ -14,34 +12,13 @@ interface CarteProduitProps {
 
 const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
   const { ajouterAuPanier } = usePanier();
-  const { estConnecte } = useAuth();
-  const [showProtection, setShowProtection] = useState(false);
-  const [isFavoris, setIsFavoris] = useState(false);
+  const { isFavoris, toggleFavoris } = useFavoris();
 
-  // Charger le statut favoris
-  useEffect(() => {
-    if (estConnecte) {
-      checkFavoris();
-    }
-  }, [estConnecte]);
-
-  const checkFavoris = async () => {
-    try {
-      const result = await apiService.checkIsFavoris(produit.id);
-      setIsFavoris(result.is_favoris);
-    } catch (err) {
-      console.error('Erreur lors de la vérification favoris:', err);
-    }
-  };
+  const estFavoris = isFavoris(produit.id);
 
   const gererAjoutPanier = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!estConnecte) {
-      setShowProtection(true);
-      return;
-    }
 
     ajouterAuPanier(produit);
     toast.success('Article ajouté au panier ! 🛍️', {
@@ -53,41 +30,10 @@ const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!estConnecte) {
-      setShowProtection(true);
-      return;
-    }
-
-    try {
-      if (isFavoris) {
-        await apiService.removeFromFavoris(produit.id);
-        setIsFavoris(false);
-        toast.success('Retiré des favoris');
-        // Notifier les autres composants (ex: page Mon Compte)
-        try {
-          window.dispatchEvent(new CustomEvent('favorisChanged', { detail: { produitId: produit.id, action: 'removed' } }));
-        } catch (err) {
-          // ignore
-        }
-      } else {
-        await apiService.addToFavoris(produit.id);
-        setIsFavoris(true);
-        toast.success('Ajouté aux favoris ! ❤️');
-        // Notifier les autres composants (ex: page Mon Compte)
-        try {
-          window.dispatchEvent(new CustomEvent('favorisChanged', { detail: { produitId: produit.id, action: 'added' } }));
-        } catch (err) {
-          // ignore
-        }
-      }
-    } catch (err) {
-      toast.error('Erreur lors de la gestion des favoris');
-      console.error(err);
-    }
+    await toggleFavoris(produit.id);
   };
 
   return (
-    <>
       <Link
         to={`/produit/${produit.id}`}
         className="group card-product block animate-fade-in"
@@ -123,13 +69,13 @@ const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
             <button
               onClick={gererFavoris}
               className={`p-3 rounded-full transition-colors shadow-card ${
-                isFavoris
+                estFavoris
                   ? 'bg-red-500 text-white'
                   : 'bg-card text-foreground hover:bg-red-500 hover:text-white'
               }`}
               aria-label="Ajouter aux favoris"
             >
-              <Heart size={16} fill={isFavoris ? 'currentColor' : 'none'} />
+              <Heart size={16} fill={estFavoris ? 'currentColor' : 'none'} />
             </button>
           </div>
         </div>
@@ -173,13 +119,6 @@ const CarteProduit: React.FC<CarteProduitProps> = ({ produit }) => {
           )}
         </div>
       </Link>
-
-      <ProtectionConnexion
-        open={showProtection}
-        onOpenChange={setShowProtection}
-        action="effectuer cette action"
-      />
-    </>
   );
 };
 

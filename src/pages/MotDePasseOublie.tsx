@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,9 +8,11 @@ import apiService from '@/lib/api.ts';
 
 export default function MotDePasseOublie() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'email' | 'reset'>('email');
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
+  const [demandeEnvoyee, setDemandeEnvoyee] = useState(false);
   const [nouveauMotDePasse, setNouveauMotDePasse] = useState('');
   const [chargement, setChargement] = useState(false);
   const [message, setMessage] = useState('');
@@ -22,10 +25,8 @@ export default function MotDePasseOublie() {
     setMessage('');
 
     try {
-      const response = await apiService.motDePasseOublie(email);
-      setToken(response.token);
-      setMessage('Un email avec un lien de réinitialisation a été envoyé');
-      setStep('reset');
+      await apiService.motDePasseOublie(email);
+      setDemandeEnvoyee(true);
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur lors de la demande');
     } finally {
@@ -57,7 +58,7 @@ export default function MotDePasseOublie() {
     }
 
     try {
-      await apiService.reinitialiserMotDePasse(token, nouveauMotDePasse);
+      await apiService.reinitialiserMotDePasse(token!, nouveauMotDePasse);
       setMessage('Mot de passe réinitialisé avec succès! Redirection...');
       setTimeout(() => navigate('/connexion'), 2000);
     } catch (err) {
@@ -68,12 +69,12 @@ export default function MotDePasseOublie() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">
-          🔐 Réinitialiser
+    <div className="min-h-screen bg-gradient-to-br from-rose-light to-cream flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-hover p-8">
+        <h1 className="text-3xl font-serif font-semibold text-center mb-2 gradient-text">
+          Réinitialiser
         </h1>
-        <p className="text-center text-gray-600 mb-6">
+        <p className="text-center text-muted-foreground mb-6">
           Récupérez l'accès à votre compte
         </p>
 
@@ -89,10 +90,51 @@ export default function MotDePasseOublie() {
           </Alert>
         )}
 
-        {step === 'email' ? (
+        {token ? (
+          <form onSubmit={handleReset} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Nouveau mot de passe
+              </label>
+              <Input
+                type="password"
+                value={nouveauMotDePasse}
+                onChange={(e) => setNouveauMotDePasse(e.target.value)}
+                placeholder="Minimum 8 caractères"
+                required
+                disabled={chargement}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                ✓ Au moins 8 caractères
+                <br />
+                ✓ Au moins une majuscule
+                <br />
+                ✓ Au moins un chiffre
+              </p>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={chargement || !nouveauMotDePasse}
+              className="w-full btn-primary py-6 text-base"
+            >
+              {chargement ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
+            </Button>
+          </form>
+        ) : demandeEnvoyee ? (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail size={28} className="text-green-600" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Si un compte existe avec l'adresse <strong>{email}</strong>, un email contenant un lien de
+              réinitialisation vient de vous être envoyé. Pensez à vérifier vos spams.
+            </p>
+          </div>
+        ) : (
           <form onSubmit={handleDemandReset} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Email
               </label>
               <Input
@@ -108,49 +150,18 @@ export default function MotDePasseOublie() {
             <Button
               type="submit"
               disabled={chargement || !email}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2 rounded-lg transition"
+              className="w-full btn-primary py-6 text-base"
             >
               {chargement ? 'Envoi en cours...' : 'Envoyer le lien'}
             </Button>
           </form>
-        ) : (
-          <form onSubmit={handleReset} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nouveau mot de passe
-              </label>
-              <Input
-                type="password"
-                value={nouveauMotDePasse}
-                onChange={(e) => setNouveauMotDePasse(e.target.value)}
-                placeholder="Minimum 8 caractères"
-                required
-                disabled={chargement}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                ✓ Au moins 8 caractères
-                <br />
-                ✓ Au moins une majuscule
-                <br />
-                ✓ Au moins un chiffre
-              </p>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={chargement || !nouveauMotDePasse}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2 rounded-lg transition"
-            >
-              {chargement ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
-            </Button>
-          </form>
         )}
 
-        <p className="text-center text-sm text-gray-600 mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-4">
           Vous vous souvenez de votre mot de passe?{' '}
           <button
             onClick={() => navigate('/connexion')}
-            className="text-pink-600 hover:text-pink-700 font-semibold"
+            className="text-primary hover:text-rose-dark font-semibold"
           >
             Se connecter
           </button>

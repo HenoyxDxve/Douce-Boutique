@@ -1,18 +1,30 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, Search, Menu, X, Heart, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
+import { ShoppingBag, User, Search, Menu, X, Heart, LogOut, Moon, Sun } from 'lucide-react';
 import { usePanier } from '@/contexts/PanierContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFraisLivraison } from '@/hooks/useFraisLivraison';
+import NotificationsBell from '@/components/NotificationsBell';
+import ConfirmerDeconnexion from '@/components/ConfirmerDeconnexion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import apiService from '@/lib/api.ts';
+import { formaterPrix } from '@/data/produits';
 
 const Header: React.FC = () => {
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const { nombreArticles } = usePanier();
   const { estConnecte, estAdmin, utilisateur, deconnexion } = useAuth();
+  const { fraisLivraison } = useFraisLivraison();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [monte, setMonte] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => setMonte(true), []);
+
+  const basculerTheme = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   const liens = [
     { href: '/', label: 'Accueil' },
@@ -29,24 +41,16 @@ const Header: React.FC = () => {
   };
 
   const redirectionAdmin = () => {
-    // Demander au backend de créer une session admin (en utilisant le JWT stocké)
-    apiService.createAdminSession()
-      .then(() => {
-        // Rediriger vers le tableau de bord admin du frontend
-        window.location.href = 'http://localhost:8081/admin/dashboard';
-      })
-      .catch((err) => {
-        console.error('Erreur création session admin:', err);
-        // Fallback vers Django admin
-        window.open('http://localhost:8000/admin/', '_blank');
-      });
+    navigate('/admin/dashboard');
   };
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       {/* Bannière promo */}
       <div className="bg-primary text-primary-foreground text-center py-2 text-sm">
-        <span className="font-medium">🎀 Livraison gratuite dès 50 000 FCFA d'achat !</span>
+        <span className="font-medium">
+          🎀 {fraisLivraison > 0 ? `Livraison à ${formaterPrix(fraisLivraison)} partout en Côte d'Ivoire` : 'Livraison gratuite sur toute la boutique !'}
+        </span>
       </div>
 
       <div className="container mx-auto px-4">
@@ -86,6 +90,16 @@ const Header: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-2 md:space-x-4">
+            {/* Mode sombre */}
+            <button
+              className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors"
+              onClick={basculerTheme}
+              aria-label="Changer de thème"
+              title="Mode clair / sombre"
+            >
+              {monte && resolvedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
             {/* Recherche */}
             <div className="relative">
               {rechercheOuverte ? (
@@ -109,12 +123,15 @@ const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Favoris - visible si connecté */}
-            {estConnecte && (
+            {/* Favoris - accessible aux visiteurs et aux membres */}
+            {!estAdmin && (
               <Link to="/favoris" className="hidden md:flex p-2 hover:bg-secondary rounded-full transition-colors" aria-label="Favoris">
                 <Heart size={20} />
               </Link>
             )}
+
+            {/* Notifications */}
+            {!estAdmin && <NotificationsBell className="hidden md:block" />}
 
             {/* Compte ou Admin */}
             {estConnecte ? (
@@ -170,16 +187,25 @@ const Header: React.FC = () => {
                   {lien.label}
                 </Link>
               ))}
+              <button
+                onClick={basculerTheme}
+                className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2 text-left"
+              >
+                {monte && resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                {monte && resolvedTheme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              </button>
+              {!estAdmin && (
+                <Link
+                  to="/favoris"
+                  className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                  onClick={() => setMenuOuvert(false)}
+                >
+                  <Heart size={16} />
+                  Favoris
+                </Link>
+              )}
               {estConnecte && (
                 <>
-                  <Link
-                    to="/favoris"
-                    className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
-                    onClick={() => setMenuOuvert(false)}
-                  >
-                    <Heart size={16} />
-                    Favoris
-                  </Link>
                   {estAdmin && (
                     <button
                       onClick={() => {
@@ -191,13 +217,14 @@ const Header: React.FC = () => {
                       ⚙️ Dashboard Admin
                     </button>
                   )}
-                  <button
-                    onClick={handleDeconnexion}
-                    className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
-                  >
-                    <LogOut size={16} />
-                    Déconnexion
-                  </button>
+                  <ConfirmerDeconnexion onConfirm={handleDeconnexion}>
+                    <button
+                      className="py-2 px-4 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                    >
+                      <LogOut size={16} />
+                      Déconnexion
+                    </button>
+                  </ConfirmerDeconnexion>
                 </>
               )}
             </div>

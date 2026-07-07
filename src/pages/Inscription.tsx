@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import BoutonGoogle from '@/components/BoutonGoogle';
+import { validerNom, validerTelephoneIvoirien, validerForceMotDePasse } from '@/lib/validation';
 import { toast } from 'sonner';
 
 export default function Inscription() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { inscription } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -45,6 +48,26 @@ export default function Inscription() {
       return;
     }
 
+    const erreurMotDePasse = validerForceMotDePasse(formData.motDePasse);
+    if (erreurMotDePasse) {
+      setErreur(erreurMotDePasse);
+      return;
+    }
+
+    const erreurNom = validerNom(formData.nom) || validerNom(formData.prenom);
+    if (erreurNom) {
+      setErreur('Le nom et le prénom ne doivent contenir que des lettres');
+      return;
+    }
+
+    if (formData.telephone) {
+      const erreurTelephone = validerTelephoneIvoirien(formData.telephone);
+      if (erreurTelephone) {
+        setErreur(erreurTelephone);
+        return;
+      }
+    }
+
     setChargement(true);
 
     try {
@@ -61,7 +84,7 @@ export default function Inscription() {
 
       toast.success('Inscription réussie! 🎉 Veuillez vous connecter.');
       // Rediriger vers la page de connexion pour que l'utilisateur se connecte
-      setTimeout(() => navigate('/connexion'), 800);
+      setTimeout(() => navigate('/connexion', { state: location.state }), 800);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur lors de l\'inscription';
       setErreur(message);
@@ -72,12 +95,12 @@ export default function Inscription() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">
-          🎀 Inscription
+    <div className="min-h-screen bg-gradient-to-br from-rose-light to-cream flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-hover p-8">
+        <h1 className="text-3xl font-serif font-semibold text-center mb-2 gradient-text">
+          Inscription
         </h1>
-        <p className="text-center text-gray-600 mb-6">
+        <p className="text-center text-muted-foreground mb-6">
           Créez votre compte Douce Boutique
         </p>
 
@@ -99,7 +122,7 @@ export default function Inscription() {
                 name="prenom"
                 value={formData.prenom}
                 onChange={handleChange}
-                placeholder="Jean"
+                placeholder="Aya"
                 required
                 disabled={chargement}
               />
@@ -113,7 +136,7 @@ export default function Inscription() {
                 name="nom"
                 value={formData.nom}
                 onChange={handleChange}
-                placeholder="Dupont"
+                placeholder="Kouassi"
                 required
                 disabled={chargement}
               />
@@ -151,6 +174,9 @@ export default function Inscription() {
                 required
                 disabled={chargement}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                8+ car., 1 majuscule, 1 chiffre
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -178,12 +204,12 @@ export default function Inscription() {
               name="adresse"
               value={formData.adresse}
               onChange={handleChange}
-              placeholder="123 Rue de la Paix"
+              placeholder="Cocody, Rue des Jardins, Lot 12"
               disabled={chargement}
             />
           </div>
 
-          {/* Ville et Code Postal */}
+          {/* Ville et Boîte postale */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -194,20 +220,20 @@ export default function Inscription() {
                 name="ville"
                 value={formData.ville}
                 onChange={handleChange}
-                placeholder="Paris"
+                placeholder="Abidjan"
                 disabled={chargement}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Code postal
+                Boîte postale
               </label>
               <Input
                 type="text"
                 name="codePostal"
                 value={formData.codePostal}
                 onChange={handleChange}
-                placeholder="75000"
+                placeholder="01 BP 1234 Abidjan 01"
                 disabled={chargement}
               />
             </div>
@@ -223,7 +249,7 @@ export default function Inscription() {
               name="telephone"
               value={formData.telephone}
               onChange={handleChange}
-              placeholder="06 12 34 56 78"
+              placeholder="+225 07 08 11 22 33"
               disabled={chargement}
             />
           </div>
@@ -235,17 +261,19 @@ export default function Inscription() {
           <Button
             type="submit"
             disabled={chargement}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2 rounded-lg transition mt-4"
+            className="w-full btn-primary py-6 text-base mt-4"
           >
             {chargement ? 'Inscription en cours...' : 'S\'inscrire'}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-gray-600 mt-4">
+        <BoutonGoogle />
+
+        <p className="text-center text-sm text-muted-foreground mt-4">
           Vous avez déjà un compte?{' '}
           <button
-            onClick={() => navigate('/connexion')}
-            className="text-pink-600 hover:text-pink-700 font-semibold"
+            onClick={() => navigate('/connexion', { state: location.state })}
+            className="text-primary hover:text-rose-dark font-semibold"
           >
             Se connecter
           </button>

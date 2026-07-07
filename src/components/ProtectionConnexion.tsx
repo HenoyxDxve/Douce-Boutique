@@ -13,22 +13,25 @@ interface ProtectionConnexionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   action: string;
+  from?: string;
 }
 
 export function ProtectionConnexion({
   open,
   onOpenChange,
   action,
+  from,
 }: ProtectionConnexionProps) {
   const navigate = useNavigate();
+  const state = from ? { from: { pathname: from } } : undefined;
 
   const handleInscription = () => {
-    navigate('/compte');
+    navigate('/inscription', { state });
     onOpenChange(false);
   };
 
   const handleConnexion = () => {
-    navigate('/connexion');
+    navigate('/connexion', { state });
     onOpenChange(false);
   };
 
@@ -48,7 +51,7 @@ export function ProtectionConnexion({
           <div className="flex gap-3">
             <Button
               onClick={handleConnexion}
-              className="flex-1 bg-pink-600 hover:bg-pink-700"
+              className="flex-1 bg-primary hover:bg-rose-dark"
             >
               Se connecter
             </Button>

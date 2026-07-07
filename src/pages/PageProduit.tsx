@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Heart, Minus, Plus, ShoppingBag, Truck, RefreshCw, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { produits, formaterPrix, calculerReduction, Produit } from '@/data/produits';
+import { formaterPrix, calculerReduction } from '@/data/produits';
+import { useProduits } from '@/hooks/useProduits';
 import { usePanier } from '@/contexts/PanierContext';
+import { useFavoris } from '@/contexts/FavorisContext';
 import CarteProduit from '@/components/CarteProduit';
 import { toast } from 'sonner';
 
@@ -11,7 +13,9 @@ const PageProduit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { ajouterAuPanier } = usePanier();
+  const { isFavoris, toggleFavoris } = useFavoris();
 
+  const { data: produits = [], isLoading } = useProduits();
   const produit = produits.find((p) => p.id === id);
 
   const [quantite, setQuantite] = useState(1);
@@ -22,6 +26,14 @@ const PageProduit: React.FC = () => {
     produit?.couleurs?.[0]
   );
   const [imageActive, setImageActive] = useState(0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   if (!produit) {
     return (
@@ -83,6 +95,8 @@ const PageProduit: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setImageActive(index)}
+                    title={`Voir l'image ${index + 1}`}
+                    aria-label={`Voir l'image ${index + 1}`}
                     className={`w-20 h-24 rounded-lg overflow-hidden border-2 transition-colors ${
                       imageActive === index ? 'border-primary' : 'border-transparent'
                     }`}
@@ -216,11 +230,17 @@ const PageProduit: React.FC = () => {
               </Button>
               <Button
                 variant="outline"
-                className="p-4 border-border hover:bg-secondary hover:text-primary"
-                onClick={() => toast.success('Ajouté aux favoris ! ❤️')}
+                className={`p-4 border-border transition-colors ${
+                  produit && isFavoris(produit.id)
+                    ? 'bg-red-500 text-white border-red-500 hover:bg-red-600'
+                    : 'hover:bg-secondary hover:text-primary'
+                }`}
+                onClick={() => {
+                  if (produit) toggleFavoris(produit.id);
+                }}
                 aria-label="Ajouter aux favoris"
               >
-                <Heart size={24} />
+                <Heart size={24} fill={produit && isFavoris(produit.id) ? 'currentColor' : 'none'} />
               </Button>
             </div>
 

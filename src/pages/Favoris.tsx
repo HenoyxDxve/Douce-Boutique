@@ -1,165 +1,146 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Heart, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Heart } from 'lucide-react';
-import apiService from '@/lib/api.ts';
-// Header and Footer are provided globally by the app layout
-
-interface Produit {
-  id: string;
-  nom: string;
-  description: string;
-  prix: number;
-  prix_original?: number;
-  categorie_nom: string;
-  image_principale?: string;
-  stock: number;
-  en_stock: boolean;
-  pourcentage_reduction: number;
-  nouveau: boolean;
-  en_promotion: boolean;
-}
-
-interface Favoris {
-  id: string;
-  produit: Produit;
-  date_ajout: string;
-}
+import { useFavoris } from '@/contexts/FavorisContext';
+import { usePanier } from '@/contexts/PanierContext';
+import { formaterPrix } from '@/data/produits';
+import { useProduits } from '@/hooks/useProduits';
+import { toast } from 'sonner';
 
 export default function Favoris() {
-  const { estConnecte } = useAuth();
-  const [favoris, setFavoris] = useState<Favoris[]>([]);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState('');
+  const { favorisIds, toggleFavoris, chargement: chargementFavoris } = useFavoris();
+  const { ajouterAuPanier } = usePanier();
+  const { data: produits = [], isLoading: chargementProduits } = useProduits();
 
-  useEffect(() => {
-    const chargerFavoris = async () => {
-      if (!estConnecte) {
-        setChargement(false);
-        return;
-      }
+  const produitsFavoris = produits.filter((p) => favorisIds.has(p.id));
+  const isLoading = chargementProduits || chargementFavoris;
 
-      try {
-        const data = await apiService.getFavoris();
-        setFavoris(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setErreur('Erreur lors du chargement des favoris');
-        console.error(err);
-      } finally {
-        setChargement(false);
-      }
-    };
-
-    chargerFavoris();
-  }, [estConnecte]);
-
-  const removeFavoris = async (produitId: string) => {
-    try {
-      await apiService.removeFromFavoris(produitId);
-      setFavoris(favoris.filter((f) => f.produit.id !== produitId));
-    } catch (err) {
-      console.error('Erreur lors de la suppression:', err);
-    }
-  };
-
-  if (!estConnecte) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">❤️ Mes Favoris</h1>
-          <p className="text-gray-600 mb-6">Connectez-vous pour voir vos favoris</p>
-          <Button href="/connexion" className="bg-pink-600 hover:bg-pink-700">
-            Se connecter
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (chargement) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500 mx-auto mb-4"></div>
-          <p>Chargement des favoris...</p>
-        </div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-12">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-2">❤️ Mes Favoris</h1>
-          <p className="text-gray-600 mb-8">
-            {favoris.length === 0 ? 'Aucun produit favori pour le moment' : `${favoris.length} produit(s) en favori`}
+    <div className="min-h-screen py-10">
+      <div className="container mx-auto px-4">
+        {/* En-tête */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-serif text-foreground">
+            Mes Favoris
+            {produitsFavoris.length > 0 && (
+              <span className="text-primary ml-2">
+                ({produitsFavoris.length})
+              </span>
+            )}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {produitsFavoris.length === 0
+              ? 'Aucun produit en favori pour le moment'
+              : `${produitsFavoris.length} produit${produitsFavoris.length > 1 ? 's' : ''} sauvegardé${produitsFavoris.length > 1 ? 's' : ''}`}
           </p>
+        </div>
 
-          {erreur && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-              {erreur}
+        {produitsFavoris.length === 0 ? (
+          <div className="text-center py-16 animate-fade-in">
+            <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart size={40} className="text-muted-foreground" />
             </div>
-          )}
-
-          {favoris.length === 0 ? (
-            <div className="text-center py-12">
-              <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-lg text-gray-600">
-                Vous n'avez pas encore d'articles en favoris
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {favoris.map((fav) => (
-                <div
-                  key={fav.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
+            <h2 className="text-xl font-serif mb-3">
+              Votre liste de favoris est vide
+            </h2>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Parcourez notre catalogue et cliquez sur le cœur pour sauvegarder
+              vos articles préférés.
+            </p>
+            <Link to="/catalogue">
+              <Button className="btn-primary">
+                Découvrir la boutique
+                <ArrowRight className="ml-2" size={18} />
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {produitsFavoris.map((produit) => (
+              <div
+                key={produit.id}
+                className="bg-card rounded-2xl shadow-soft overflow-hidden group animate-fade-in"
+              >
+                {/* Image */}
+                <Link
+                  to={`/produit/${produit.id}`}
+                  className="block relative aspect-[3/4] overflow-hidden bg-cream"
                 >
-                  {fav.produit.image_principale && (
-                    <img
-                      src={fav.produit.image_principale}
-                      alt={fav.produit.nom}
-                      className="w-full h-48 object-cover"
-                    />
+                  <img
+                    src={produit.images[0]}
+                    alt={produit.nom}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {produit.enPromotion && produit.prixOriginal && (
+                    <span className="badge-promo absolute top-3 left-3">
+                      -{Math.round(((produit.prixOriginal - produit.prix) / produit.prixOriginal) * 100)}%
+                    </span>
                   )}
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      {fav.produit.nom}
+                  {produit.nouveau && (
+                    <span className="badge-new absolute top-3 left-3">
+                      Nouveau
+                    </span>
+                  )}
+                </Link>
+
+                {/* Infos */}
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    {produit.categorie}
+                  </p>
+                  <Link to={`/produit/${produit.id}`}>
+                    <h3 className="font-medium text-foreground hover:text-primary transition-colors line-clamp-1 mb-2">
+                      {produit.nom}
                     </h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {fav.produit.categorie_nom}
-                    </p>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        {fav.produit.en_promotion ? (
-                          <>
-                            <span className="text-xl font-bold text-pink-600">
-                              {fav.produit.prix.toFixed(2)} €
-                            </span>
-                            <span className="ml-2 text-sm text-gray-500 line-through">
-                              {fav.produit.prix_original?.toFixed(2)} €
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-xl font-bold text-gray-900">
-                            {fav.produit.prix.toFixed(2)} €
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeFavoris(fav.produit.id)}
-                      className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded transition"
+                  </Link>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-lg font-semibold text-primary">
+                      {formaterPrix(produit.prix)}
+                    </span>
+                    {produit.prixOriginal && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        {formaterPrix(produit.prixOriginal)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 btn-primary py-2 text-sm"
+                      onClick={() => {
+                        ajouterAuPanier(produit);
+                        toast.success('Ajouté au panier ! 🛍️', {
+                          description: produit.nom,
+                        });
+                      }}
                     >
-                      <Heart className="w-4 h-4 fill-current" />
-                      Retirer
+                      <ShoppingBag size={15} className="mr-1.5" />
+                      Ajouter
+                    </Button>
+                    <button
+                      onClick={() => toggleFavoris(produit.id)}
+                      className="p-2.5 rounded-xl border border-border text-muted-foreground hover:text-destructive hover:border-destructive hover:bg-destructive/5 transition-colors"
+                      aria-label="Retirer des favoris"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    );
+    </div>
+  );
 }
