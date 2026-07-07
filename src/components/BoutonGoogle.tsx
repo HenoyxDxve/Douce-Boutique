@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, CompteCreeError } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 declare global {
@@ -67,7 +67,11 @@ const BoutonGoogle: React.FC = () => {
                 navigate(from);
               }
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : 'Erreur lors de la connexion Google');
+              if (err instanceof CompteCreeError) {
+                toast.success('Compte créé ! Cliquez à nouveau sur "Se connecter avec Google" pour vous authentifier.');
+              } else {
+                toast.error(err instanceof Error ? err.message : 'Erreur lors de la connexion Google');
+              }
             }
           },
         });

@@ -65,6 +65,8 @@ services:
         sync: false
       - key: CINETPAY_SITE_ID
         sync: false
+      - key: CINETPAY_NOTIFY_URL
+        value: https://douce-boutique-api.onrender.com/api/paiements/cinetpay/notify/
       # Crée (ou promeut) ce compte en admin au déploiement — choisis un vrai
       # email/mot de passe forts, ce ne sont pas des valeurs de démo.
       - key: ADMIN_EMAIL

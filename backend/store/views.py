@@ -324,6 +324,7 @@ class GoogleAuthView(APIView):
         email = payload['email']
         google_id = payload['sub']
 
+        compte_cree = False
         utilisateur = Utilisateur.objects.filter(google_id=google_id).first()
         if not utilisateur:
             # L'email est vérifié par Google : lier en toute sécurité à un compte existant.
@@ -340,9 +341,23 @@ class GoogleAuthView(APIView):
                     google_id=google_id,
                 )
                 Panier.objects.create(utilisateur=utilisateur)
+                compte_cree = True
 
         if not utilisateur.est_actif:
             return Response({'erreur': 'Compte désactivé'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Comme pour l'inscription classique : la création d'un compte ne
+        # connecte pas automatiquement — l'utilisateur doit ensuite
+        # s'authentifier explicitement (même geste : recliquer sur le bouton
+        # Google, qui reconnaîtra alors le compte existant).
+        if compte_cree:
+            return Response(
+                {
+                    'message': 'Compte créé avec succès. Veuillez vous authentifier pour continuer.',
+                    'compte_cree': True,
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
         return Response({
             'message': 'Connexion réussie',

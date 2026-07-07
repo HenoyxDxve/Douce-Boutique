@@ -387,7 +387,13 @@ class ApiService {
 
   // ---- Google Sign-In ----
   connexionGoogle(idToken: string) {
-    return this.request<{ access: string; refresh: string; utilisateur: unknown }>(
+    return this.request<{
+      access?: string;
+      refresh?: string;
+      utilisateur?: unknown;
+      compte_cree?: boolean;
+      message?: string;
+    }>(
       'POST',
       '/auth/google/',
       { id_token: idToken },
